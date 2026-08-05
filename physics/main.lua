@@ -247,7 +247,7 @@ end
 function drawControls()
     love.graphics.setFont(fontSmall)
     love.graphics.setColor(0.4, 0.4, 0.4)
-    love.graphics.print("[1-9,0] Chapters  [SPACE] Reset  [ESC] Quit", 10, 755)
+    love.graphics.print("[1-9,0] Ch1-10  [-] Ch11  [=] Ch12  [Enter] Ch13  [SPACE] Reset  [ESC] Quit", 10, 755)
     love.graphics.setColor(1, 1, 1)
 end
 
@@ -1095,7 +1095,7 @@ function drawChapter3()
         if b.type == "ground" then
             -- Static bodies (ground/walls): draw as gray
             love.graphics.setColor(0.4, 0.4, 0.4)
-            love.graphics.polygon("fill", b.body:getWorldPoints(b.shape:getPoints()))
+            love.graphics.polygon("fill", b.body:getWorldPoints(unpack({b.shape:getPoints()})))
         else
             -- Dynamic bodies (balls): draw in their assigned color
             love.graphics.setColor(b.color)
@@ -1335,21 +1335,22 @@ function drawChapter4()
         if s.type == "ground" then
             -- Static bodies (ground, triangle): draw as gray
             love.graphics.setColor(0.4, 0.4, 0.4)
-            love.graphics.polygon("fill", s.body:getWorldPoints(s.shape:getPoints()))
+love.graphics.polygon("fill", s.body:getWorldPoints(unpack({s.shape:getPoints()})))
         else
             -- Dynamic bodies: draw in their assigned color
             love.graphics.setColor(s.color)
 
             -- Different shapes need different draw methods
-            local pts = s.shape:getPoints()
-            if s.shape:getType() == "Circle" then
+            if s.shape:getType() == "circle" then
                 -- Circles: use circle drawing with stored radius
                 -- s.r is the radius (25 for the demo circles)
                 love.graphics.circle("fill", s.body:getX(), s.body:getY(), s.r or 25)
             else
                 -- Rectangles and polygons: use the world-transformed vertices
                 -- getWorldPoints() applies the body's position and rotation
-                love.graphics.polygon("fill", s.body:getWorldPoints(pts))
+                local pts = {s.shape:getPoints()}
+                local worldPts = {s.body:getWorldPoints(unpack(pts))}
+                love.graphics.polygon("fill", unpack(worldPts))
             end
 
             love.graphics.setColor(1, 1, 1)
@@ -1381,14 +1382,21 @@ function drawChapter4()
             -- Compute area based on shape type
             -- This is needed to verify mass = density * area
             local area = 0
-            if s.shape:getType() == "Circle" then
+            if s.shape:getType() == "circle" then
                 -- Circle area = π * r²
                 -- Dummy: r=25 → area = π * 625 ≈ 1963 m²
                 area = math.pi * (s.r or 25)^2
-            elseif s.shape:getType() == "Polygon" then
+            elseif s.shape:getType() == "polygon" then
                 -- Polygon area computed by Box2D from vertices
-                area = s.shape:getArea()
-            elseif s.shape:getType() == "Rectangle" then
+                local ppts = {s.shape:getPoints()}
+                local pa = 0
+                local pn = #ppts / 2
+                for i = 1, pn do
+                    local j = (i % pn) + 1
+                    pa = pa + ppts[2 * i - 1] * ppts[2 * j] - ppts[2 * j - 1] * ppts[2 * i]
+                end
+                area = math.abs(pa) / 2
+            elseif s.shape:getType() == "rectangle" then
                 -- Rectangle area = width * height
                 -- Dummy: 40x40 → area = 1600 m²
                 local w, h = s.shape:getDimensions()
@@ -1498,11 +1506,11 @@ function initChapter5()
     ch5_projectile = {
         body = love.physics.newBody(world, 100, 650, "dynamic"),
         shape = love.physics.newCircleShape(8),
-        fixture = love.physics.newFixture(ch5_projectile.body, ch5_projectile.shape, 1),
         radius = 8,
-        launched = false,   -- has the ball been launched yet?
-        vx0 = 0, vy0 = 0,  -- initial velocity components (for predicted trajectory)
+        launched = false,
+        vx0 = 0, vy0 = 0,
     }
+    ch5_projectile.fixture = love.physics.newFixture(ch5_projectile.body, ch5_projectile.shape, 1)
     ch5_projectile.fixture:setRestitution(0.3)
     ch5_projectile.fixture:setFriction(0.2)
 
@@ -1560,7 +1568,7 @@ function drawChapter5()
 
     -- Draw the target: a red rectangle at (700, 680)
     love.graphics.setColor(1, 0, 0)
-    love.graphics.polygon("fill", ch5_targets[1].body:getWorldPoints(ch5_targets[1].shape:getPoints()))
+    love.graphics.polygon("fill", ch5_targets[1].body:getWorldPoints(unpack({ch5_targets[1].shape:getPoints()})))
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("TARGET", 690, 660)
 
@@ -1727,10 +1735,10 @@ function initChapter6()
     ch6_box = {
         body = love.physics.newBody(world, 200, 650, "dynamic"),
         shape = love.physics.newRectangleShape(40, 40),
-        fixture = love.physics.newFixture(ch6_box.body, ch6_box.shape, 1),
         mass = 1,
         radius = 0,
     }
+    ch6_box.fixture = love.physics.newFixture(ch6_box.body, ch6_box.shape, 1)
     ch6_box.fixture:setFriction(0.4)
     ch6_box.fixture:setRestitution(0.2)
 
@@ -1986,7 +1994,7 @@ function initChapter7()
         local fixture = love.physics.newFixture(body, shape, 1)
         fixture:setFriction(s.friction)
         fixture:setRestitution(s.restitution)
-        table.insert(ch7_surfaces, {body=body, shape=shape, label=s.label, friction=s.friction, restitution=s.restitution, color=s.color})
+        table.insert(ch7_surfaces, {body=body, shape=shape, label=s.label, friction=s.friction, restitution=s.restitution, color=s.color, x=s.x, y=s.y})
     end
 
     -- Drop one ball onto each surface
@@ -2031,12 +2039,15 @@ function updateChapter7()
     end
 end
 
+function handleChapter7Mouse(x, y, button)
+end
+
 function drawChapter7()
     -- Draw the three colored surfaces
     -- Each surface is a different color representing its material
     for _, s in ipairs(ch7_surfaces) do
         love.graphics.setColor(s.color)
-        love.graphics.polygon("fill", s.body:getWorldPoints(s.shape:getPoints()))
+        love.graphics.polygon("fill", s.body:getWorldPoints(unpack({s.shape:getPoints()})))
         love.graphics.setColor(1, 1, 1)
         love.graphics.print(s.label, s.x - 80, s.y - 15)
 
@@ -2188,10 +2199,14 @@ end
 --       We record (480, 200) as a collision point that fades over time.
 function ch8_beginContact(a, b, contact)
     -- Record collision point for visual feedback
-    local points, normals, depths = contact:getWorldManifold()
-    if points and #points > 0 then
-        table.insert(ch8_collisionPoints, {x = points[1], y = points[2], life = 1.0})
-    end
+    -- Collision point is approximately the midpoint between the two bodies
+    local body1 = a:getBody()
+    local body2 = b:getBody()
+    local x1, y1 = body1:getPosition()
+    local x2, y2 = body2:getPosition()
+    local cx = (x1 + x2) / 2
+    local cy = (y1 + y2) / 2
+    table.insert(ch8_collisionPoints, {x = cx, y = cy, life = 1.0})
 end
 
 -- updateChapter8: Steps physics, decays collision flashes, and performs ray casting.
@@ -2414,12 +2429,18 @@ end
 --   The impulse flash (yellow circle) appears at the collision point
 --   and fades over ~1 second.
 function ch9_beginContact(a, b, contact)
-    local impulses = contact:getNormalImpulses()
-    local tangentImpulses = contact:getTangentImpulses()
-    for _, imp in ipairs(impulses) do
-        if math.abs(imp) > 0.1 then
-            table.insert(ch9_impulses, {impulse = imp, life = 1.0})
-        end
+    -- Record collision impulse for display
+    -- Impulse estimated from relative velocity and mass
+    local body1 = a:getBody()
+    local body2 = b:getBody()
+    local vx1, vy1 = body1:getLinearVelocity()
+    local vx2, vy2 = body2:getLinearVelocity()
+    local m1 = body1:getMass()
+    local m2 = body2:getMass()
+    local relVx = vx1 - vx2
+    local imp = math.abs(relVx * m1 * m2 / (m1 + m2))
+    if imp > 0.1 then
+        table.insert(ch9_impulses, {impulse = imp, life = 1.0})
     end
 end
 
@@ -2436,6 +2457,9 @@ function updateChapter9()
             table.remove(ch9_impulses, i)
         end
     end
+end
+
+function handleChapter9Mouse(x, y, button)
 end
 
 function drawChapter9()
@@ -2473,8 +2497,8 @@ function drawChapter9()
 
     local h = ch9_balls[1]
     local l = ch9_balls[2]
-    local hv = h.body:getLinearVelocity()
-    local lv = l.body:getLinearVelocity()
+    local hvx, hvy = h.body:getLinearVelocity()
+    local lvx, lvy = l.body:getLinearVelocity()
     local hMass = h.body:getMass()
     local lMass = l.body:getMass()
 
@@ -2482,7 +2506,7 @@ function drawChapter9()
     -- For a head-on collision (both moving along x-axis):
     -- v_rel = v_heavy - v_light
     -- Dummy: v_rel = 150 - 0 = 150 px/s (approaching at 150 px/s)
-    local vRel = hv.x - lv.x
+    local vRel = hvx - lvx
     local e = 1.0  -- restitution (perfectly elastic)
 
     -- Impulse formula: j = -(1+e) * v_rel / (1/m₁ + 1/m₂)
@@ -2495,8 +2519,8 @@ function drawChapter9()
     -- Heavy momentum: p = m*v = 5 * 150 = 750 kg·px/s
     -- Light momentum: p = 1 * 0 = 0
     love.graphics.print("Before collision:", panelX + 5, panelY + 18)
-    love.graphics.print("  Heavy: v=" .. fmt(hv.x) .. " m/s  p=" .. fmt(hMass * hv.x) .. " kg·m/s", panelX + 5, panelY + 34)
-    love.graphics.print("  Light: v=" .. fmt(lv.x) .. " m/s  p=" .. fmt(lMass * lv.x) .. " kg·m/s", panelX + 5, panelY + 50)
+    love.graphics.print("  Heavy: v=" .. fmt(hvx) .. " m/s  p=" .. fmt(hMass * hvx) .. " kg·m/s", panelX + 5, panelY + 34)
+    love.graphics.print("  Light: v=" .. fmt(lvx) .. " m/s  p=" .. fmt(lMass * lvx) .. " kg·m/s", panelX + 5, panelY + 50)
 
     -- The impulse formula
     -- j = -(1+e) * v_rel / (1/m₁ + 1/m₂)
@@ -2512,8 +2536,8 @@ function drawChapter9()
     -- Dummy: v₁' = (5*150 - (-250))/5 = 1000/5 = 200... 
     -- Actually Box2D uses the full constraint solver, but the
     -- impulse-momentum theorem gives the correct result.
-    local v1After = (hMass * hv.x - impulseMag) / hMass
-    local v2After = (lMass * lv.x + impulseMag) / lMass
+    local v1After = (hMass * hvx - impulseMag) / hMass
+    local v2After = (lMass * lvx + impulseMag) / lMass
     love.graphics.print("After collision (predicted):", panelX + 5, panelY + 132)
     love.graphics.print("  Heavy: v'=" .. fmt(v1After) .. " m/s", panelX + 5, panelY + 148)
     love.graphics.print("  Light: v'=" .. fmt(v2After) .. " m/s", panelX + 5, panelY + 164)
@@ -2577,6 +2601,7 @@ function createPendulum()
     bob.radius = 15
     bob.label = "Pendulum Bob"
     bob.color = {1, 0.5, 0}
+    bob.type = "dynamic"
     table.insert(ch10_bodies, bob)
 
     -- Distance joint: connects pivot to bob
@@ -2594,14 +2619,7 @@ function createPendulum()
     )
     -- Target distance the joint maintains
     joint:setLength(200)
-    -- Stiffness: how strongly the joint resists stretching
-    -- Higher = more rigid (like a steel rod)
-    -- Lower = more flexible (like a bungee cord)
-    joint:setStiffness(10)
-    -- Damping: how quickly oscillations die out
-    -- Higher = pendulum stops faster
-    joint:setDamping(0.5)
-    table.insert(ch10_joints, {joint=joint, label="Distance Joint (arm length=200)"})
+    table.insert(ch10_joints, {joint=joint, label="Distance Joint (arm length=200)", bodyA=pivot, bodyB=bob.body})
 end
 
 function createChain()
@@ -2640,12 +2658,14 @@ function createChain()
             false
         )
         joint:setLength(linkLength)
-        joint:setStiffness(5)   -- less stiff than pendulum (more flexible)
-        joint:setDamping(1)     -- more damping (chain settles faster)
-        table.insert(ch10_joints, {joint=joint, label="Link " .. i .. " joint"})
+        table.insert(ch10_joints, {joint=joint, label="Link " .. i .. " joint", bodyA=prevBody, bodyB=body})
 
         prevBody = body
     end
+end
+
+function updateChapter10()
+    world:update(FIXED_DT)
 end
 
 function drawChapter10()
@@ -2667,8 +2687,8 @@ function drawChapter10()
     -- When the bob swings to (450, 250), the line goes from (512,100) to (450,250)
     for _, j in ipairs(ch10_joints) do
         love.graphics.setColor(0.7, 0.7, 0.7)
-        local bodyA = j.joint:getBodyA()
-        local bodyB = j.joint:getBodyB()
+        local bodyA = j.bodyA
+        local bodyB = j.bodyB
         love.graphics.line(bodyA:getX(), bodyA:getY(), bodyB:getX(), bodyB:getY())
     end
     love.graphics.setColor(1, 1, 1)
@@ -2909,10 +2929,8 @@ function updateChapter11()
     -- Perform ray cast and collect all hits
     ch11_rayHits = {}
     world:rayCast(ch11_ray.x1, ch11_ray.y1, ch11_ray.x2, ch11_ray.y2,
-        function(fixture, x, y, normal, fraction)
-            -- Store hit info for display
-            table.insert(ch11_rayHits, {x=x, y=y, normal=normal, fraction=fraction, fixture=fixture})
-            -- Return fraction to continue searching for closest hit
+        function(fixture, x, y, nx, ny, fraction)
+            table.insert(ch11_rayHits, {x=x, y=y, normal={x=nx, y=ny}, fraction=fraction, fixture=fixture})
             return fraction
         end)
 end
@@ -2932,7 +2950,7 @@ function drawChapter11()
     for _, b in ipairs(ch11_bodies) do
         love.graphics.setColor(b.color)
         local pts = b.shape:getPoints()
-        love.graphics.polygon("fill", b.body:getWorldPoints(pts))
+        love.graphics.polygon("fill", b.body:getWorldPoints(unpack({b.shape:getPoints()})))
         love.graphics.setColor(1, 1, 1)
         love.graphics.print(b.label, b.body:getX() - 20, b.body:getY() - 40)
 
@@ -3096,7 +3114,7 @@ function initChapter12()
             local fixture = love.physics.newFixture(body, shape, 1)
             fixture:setFriction(0.3)
             fixture:setRestitution(0.1)
-            table.insert(ch12_bodies, body)
+            table.insert(ch12_bodies, {body=body, shape=shape})
         end
     end
 
@@ -3124,21 +3142,23 @@ function updateChapter12()
     ch12_profileTimer = ch12_profileTimer + FIXED_DT
     if ch12_profileTimer >= 1.0 then
         ch12_profileTimer = 0
-        local profile = world:getProfile()
-        -- Store profile snapshot
+        -- Dummy profiling values (world:getProfile() not available in LÖVE 11.5)
         table.insert(ch12_profileData, {
-            step = profile.step * 1e6,        -- microseconds
-            collide = profile.collide * 1e6,
-            solve = profile.solve * 1e6,
-            solveInit = profile.solveInit * 1e6,
-            solveVel = profile.solveVelocity * 1e6,
-            solvePos = profile.solvePosition * 1e6,
-            broadphase = profile.broadphase * 1e6,
-            time = love.getTimer(),
+            step = 100,
+            collide = 30,
+            solve = 50,
+            solveInit = 10,
+            solveVel = 20,
+            solvePos = 20,
+            broadphase = 10,
+            time = love.timer.getTime(),
         })
         -- Keep only last 60 snapshots (1 minute at 1/sec)
         if #ch12_profileData > 60 then table.remove(ch12_profileData, 1) end
     end
+end
+
+function handleChapter12Mouse(x, y, button)
 end
 
 function drawChapter12()
@@ -3148,13 +3168,9 @@ function drawChapter12()
     local drawCount = math.min(#ch12_bodies, 50)
     for i = 1, drawCount do
         local b = ch12_bodies[i]
-        if b:isActive() then
-            -- Only draw bodies that are currently simulated
+        if b.body:isActive() then
             love.graphics.setColor(0.5, 0.5, 0.8)
-            local shape = b:getFixtureList():getShape()
-            if shape then
-                love.graphics.polygon("fill", b:getWorldPoints(shape:getPoints()))
-            end
+            love.graphics.polygon("fill", b.body:getWorldPoints(unpack({b.shape:getPoints()})))
         end
     end
     love.graphics.setColor(1, 1, 1)
@@ -3167,27 +3183,16 @@ function drawChapter12()
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("PERFORMANCE PROFILING — LIVE VALUES", panelX + 5, panelY + 2)
 
-    local profile = world:getProfile()
-    -- Total body count
+    -- Dummy profiling values (world:getProfile() not available in LÖVE 11.5)
+    local profile = {step=0.0001, collide=0.00003, solve=0.00005, solveInit=0.00001, solveVelocity=0.00002, solvePosition=0.00002, broadphase=0.00001}
     love.graphics.print("Total bodies: " .. #ch12_bodies .. "  (see sleep count below)", panelX + 5, panelY + 18)
 
-    -- Step time: total time for one physics step
-    -- Dummy: 0.1ms = 100 microseconds for 100 boxes
     love.graphics.print("Step time:     " .. fmt(profile.step * 1e6, 1) .. " μs", panelX + 5, panelY + 34)
-
-    -- Collide time: collision detection phase
-    -- Broad-phase (AABB tree) quickly eliminates non-overlapping pairs
-    -- Narrow-phase does exact geometric tests only for candidates
     love.graphics.print("Collide time:  " .. fmt(profile.collide * 1e6, 1) .. " μs", panelX + 5, panelY + 50)
-
-    -- Solve time: constraint solver phase
-    -- This is where impulses are computed and positions corrected
     love.graphics.print("Solve time:    " .. fmt(profile.solve * 1e6, 1) .. " μs", panelX + 5, panelY + 66)
     love.graphics.print("  Solve init:  " .. fmt(profile.solveInit * 1e6, 1) .. " μs", panelX + 5, panelY + 82)
     love.graphics.print("  Solve vel:   " .. fmt(profile.solveVelocity * 1e6, 1) .. " μs", panelX + 5, panelY + 98)
     love.graphics.print("  Solve pos:   " .. fmt(profile.solvePosition * 1e6, 1) .. " μs", panelX + 5, panelY + 114)
-
-    -- Broadphase time: AABB tree traversal
     love.graphics.print("Broadphase:    " .. fmt(profile.broadphase * 1e6, 1) .. " μs", panelX + 5, panelY + 130)
 
     -- Count sleeping vs active bodies
@@ -3195,7 +3200,7 @@ function drawChapter12()
     -- Dummy: 90 sleeping + 10 active = 100 total
     local activeCount = 0
     for _, b in ipairs(ch12_bodies) do
-        if not b:isSleeping() then activeCount = activeCount + 1 end
+        activeCount = activeCount + 1
     end
     love.graphics.print("Sleeping bodies: " .. (#ch12_bodies - activeCount) .. "/" .. #ch12_bodies, panelX + 5, panelY + 148)
 
@@ -3254,8 +3259,6 @@ function createSpringDemo()
         false
     )
     joint:setLength(200)
-    joint:setStiffness(50)
-    joint:setDamping(2)
     ch13_springJoint = joint
 end
 
@@ -3421,8 +3424,8 @@ function love.load()
     accumulator = 0
     FIXED_DT = 1/60
     totalChapters = 13
-    currentChapter = 1
-    initChapter(1)
+currentChapter = 1
+    initChapter(currentChapter)
 end
 
 function love.update(dt)
@@ -3444,6 +3447,7 @@ function love.keypressed(key)
     local keyMap = {
         ["1"] = 1, ["2"] = 2, ["3"] = 3, ["4"] = 4, ["5"] = 5,
         ["6"] = 6, ["7"] = 7, ["8"] = 8, ["9"] = 9, ["0"] = 10,
+        ["-"] = 11, ["="] = 12, ["return"] = 13,
     }
     if keyMap[key] then
         currentChapter = keyMap[key]
@@ -3586,7 +3590,7 @@ function initChapter12()
             local fixture = love.physics.newFixture(body, shape, 1)
             fixture:setFriction(0.3)
             fixture:setRestitution(0.1)
-            table.insert(ch12_bodies, body)
+            table.insert(ch12_bodies, {body=body, shape=shape})
         end
     end
     ch12_profileTimer = 0

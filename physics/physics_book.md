@@ -1054,7 +1054,94 @@ This comes from the range equation with an offset height.
 
 ---
 
-## 7. Chapter 7 — Gravity, Friction, and Restitution
+## 7. Chapter 6 — Dynamics: F = ma with Forces Visualization
+
+### The force-acceleration chain
+
+Every game physics engine follows this exact sequence every frame:
+
+```
+Force → Acceleration → Velocity → Position
+```
+
+This is Newton's second law in action. The net force on an object determines its acceleration, which changes its velocity, which changes its position.
+
+### Applying forces in LÖVE2D
+
+Forces are applied to dynamic bodies using `body:applyForce(fx, fy)`. The force is in Newtons (pixels/s² * kg in our pixel-based units).
+
+```lua
+-- Apply a continuous force (like gravity or a thruster)
+body:applyForce(fx, fy)
+
+-- Apply an impulse (like a jump or a kick)
+body:applyLinearImpulse(ix, iy)
+```
+
+### Dummy value walkthrough — one frame with a rightward force
+
+Box: mass=1kg, at (200, 650), velocity (0, 0)
+Applied force: F_right = 3000 N
+Gravity: F_gravity = 1 * 294.3 = 294.3 N downward
+Normal force (from ground): F_normal = 294.3 N upward (balances gravity)
+Net force: F_net = (3000, 0) — only horizontal matters
+Acceleration: a = F_net/m = (3000/1, 0) = (3000, 0) px/s²
+After 1/60s: vx = 0 + 3000/60 = 50 px/s
+After 1/60s: x = 200 + 50/60 = 200.83 px
+
+### The yellow arrow shows F_net, the red arrow shows F_applied,
+the blue arrow shows F_gravity, and the green arrow shows F_normal.
+
+### Exercise 6
+
+Create a scene with a box on a frictionless surface. Apply a constant force and observe the acceleration. Then add friction and observe how the net force changes.
+
+<details>
+<summary>Solution</summary>
+
+```lua
+function love.load()
+    world = love.physics.newWorld(0, 9.81 * 30, true)
+
+    -- Frictionless ground
+    local ground = love.physics.newBody(world, 400, 550, "static")
+    local groundShape = love.physics.newRectangleShape(800, 20)
+    local groundFixture = love.physics.newFixture(ground, groundShape, 1)
+    groundFixture:setFriction(0.0)  -- No friction!
+
+    -- Box
+    local box = {}
+    box.body = love.physics.newBody(world, 200, 500, "dynamic")
+    box.shape = love.physics.newRectangleShape(40, 40)
+    box.fixture = love.physics.newFixture(box.body, box.shape, 1)
+    box.fixture:setFriction(0.0)  -- No friction!
+    box.radius = 0
+end
+
+function love.update(dt)
+    -- Apply a constant rightward force
+    box.body:applyForce(3000, 0)
+    world:update(dt)
+end
+
+function love.draw()
+    -- Ground
+    love.graphics.setColor(0.3, 0.3, 0.3)
+    love.graphics.polygon("fill", groundBody:getWorldPoints(groundShape:getPoints()))
+
+    -- Box
+    love.graphics.setColor(0.3, 0.6, 1)
+    love.graphics.rectangle("fill", box.body:getX() - 20, box.body:getY() - 20, 40, 40)
+    love.graphics.setColor(1, 1, 1)
+end
+```
+
+With no friction, the box accelerates continuously to the right. The force never stops, so the speed keeps increasing. In a real game, you'd add drag or a maximum speed to prevent infinite acceleration.
+</details>
+
+---
+
+## 8. Chapter 7 — Gravity, Friction, and Restitution
 
 ### Gravity in depth
 
@@ -1156,7 +1243,7 @@ where `reduced_mass = m₁ * m₂ / (m₁ + m₂)` and `v_rel` is the relative v
 
 This is why restitution 0.5 doesn't mean "half the energy is lost" — it means the *velocity* of separation is half the velocity of approach. Since KE scales with velocity squared, a restitution of 0.5 means 75% of the kinetic energy is lost.
 
-### Exercise 6
+### Exercise 7
 
 Create a "billiard table" with walls on all four sides and two balls. Set restitution to 1.0 and observe the balls bouncing forever. Set it to 0.0 and watch them stop. Set it to 0.5 and observe the energy loss.
 
@@ -1223,7 +1310,7 @@ With restitution 1.0 and friction 0.0, the total kinetic energy of the system is
 
 ---
 
-## 8. Chapter 8 — Collision Detection: The Maths Under the Hood
+## 9. Chapter 8 — Collision Detection: The Maths Under the Hood
 
 ### How Box2D detects collisions
 
@@ -1288,7 +1375,7 @@ body:setBullet(true)
 
 CCD uses swept volumes — it computes the *path* the shape takes during the timestep and checks for intersections along that path, not just at the endpoints.
 
-### Exercise 7
+### Exercise 8
 
 Create a thin wall (1 pixel thick in world units) and launch a fast-moving ball at it. Without CCD, the ball tunnels through. With CCD (`setBullet(true)`), it bounces correctly.
 
@@ -1342,7 +1429,7 @@ Without `setBullet(true)`, a ball moving at 1000 m/s would travel 1000 meters in
 
 ---
 
-## 9. Chapter 9 — Collision Response and Impulse
+## 10. Chapter 9 — Collision Response and Impulse
 
 ### What happens during a collision?
 
@@ -1416,7 +1503,7 @@ where `t` is the tangent vector (perpendicular to the collision normal) and `μ`
 
 Box2D uses a simplified Coulomb friction model where the friction impulse is capped at `μ * j_normal`.
 
-### Exercise 8
+### Exercise 9
 
 Create two balls of different mass and observe the collision response. A heavy ball hitting a light ball should transfer most of its momentum. A light ball hitting a heavy ball should bounce back.
 
@@ -1498,7 +1585,7 @@ The light ball flies off at nearly twice the heavy ball's original speed!
 
 ---
 
-## 10. Chapter 10 — Joints and Constraints
+## 11. Chapter 10 — Joints and Constraints
 
 ### What are joints?
 
@@ -1558,104 +1645,43 @@ joint:setMaxMotorTorque(100) -- Maximum torque in N·m
 
 -- Optional: limits
 joint:enableLimit(true)
-joint:setLowerAngle(-math.pi/4)  -- -45 degrees
-joint:setUpperAngle(math.pi/4)   -- +45 degrees
+joint:setLowerAngle(-math.rad(45))  -- Lower angle limit
+joint:setUpperAngle(math.rad(45))   -- Upper angle limit
 ```
 
-### Building a ragdoll
-
-A ragdoll is a collection of bodies connected by revolute joints, forming a humanoid figure:
+### Prismatic joint — the slider
 
 ```lua
--- Simplified ragdoll: torso, head, two arms, two legs
-function createRagdoll(world, x, y)
-    local parts = {}
-    local joints = {}
+local joint = love.physics.newPrismaticJoint(
+    bodyA, bodyB,
+    anchorX, anchorY,     -- Anchor point (world coordinates)
+    axisX, axisY,         -- Axis of motion (normalized)
+    collideConnected
+)
 
-    -- Helper: create a body part
-    local function createPart(px, py, w, h, density)
-        local body = love.physics.newBody(world, px, py, "dynamic")
-        local shape = love.physics.newRectangleShape(w, h)
-        local fixture = love.physics.newFixture(body, shape, density)
-        fixture:setFriction(0.4)
-        fixture:setRestitution(0.2)
-        return {body = body, shape = shape, w = w, h = h}
-    end
+-- Optional: motor
+joint:enableMotor(true)
+joint:setMotorSpeed(1.0)     -- Linear speed in meters/s
+joint:setMaxMotorForce(100)  -- Maximum force in N
 
-    -- Helper: create a revolute joint between two parts
-    local function createRevolute(a, b, ax, ay, bx, by)
-        local j = love.physics.newRevoluteJoint(
-            a.body, b.body, ax, ay, bx, by, false
-        )
-        j:setMaxMotorTorque(0)  -- No motor by default
-        return j
-    end
-
-    -- Torso
-    parts.torso = createPart(x, y, 30, 40, 1)
-    -- Head
-    parts.head = createPart(x, y - 50, 20, 20, 0.5)
-    -- Upper arm (left)
-    parts.luArm = createPart(x - 25, y - 10, 10, 25, 0.5)
-    -- Lower arm (left)
-    parts.llArm = createPart(x - 25, y + 20, 10, 25, 0.5)
-    -- Upper leg (left)
-    parts.luLeg = createPart(x - 10, y + 25, 12, 25, 1)
-    -- Lower leg (left)
-    parts.llLeg = createPart(x - 10, y + 55, 12, 25, 1)
-
-    -- Same for right side... (symmetric)
-
-    -- Joints
-    table.insert(joints, createRevolute(parts.torso, parts.head, x, y - 25, x, y - 40))
-    table.insert(joints, createRevolute(parts.torso, parts.luArm, x - 15, y - 10, x - 25, y - 10))
-    -- ... more joints
-
-    return parts, joints
-end
+-- Optional: limits
+joint:enableLimit(true)
+joint:setLowerLimit(-5.0)    -- Minimum distance along axis
+joint:setUpperLimit(5.0)     -- Maximum distance along axis
 ```
 
-### The mouse joint — interactive grabbing
+### Dummy value walkthrough — Pendulum:
 
-```lua
--- Create a mouse joint when the user clicks on a body
-function love.mousepressed(x, y, button)
-    if button == 1 then
-        -- Convert screen coordinates to world coordinates
-        local wx, wy = x, y  -- if scale is 1:1
+Pivot at (512, 100), bob at (512, 300)
+Arm length = 200 pixels (≈6.67 meters at 30 px/m)
+Period T = 2π√(L/g) = 2π√(6.67/9.81) ≈ 2π*0.824 ≈ 5.18 seconds
+The bob swings back and forth with this period
+Stiffness=10 controls how rigid the arm is
+Damping=0.5 causes the swing to gradually die out
 
-        -- Query for bodies at the click point
-        local fixtures = world:queryPoint(wx, wy)
-        for _, fixture in ipairs(fixtures) do
-            local body = fixture:getBody()
-            if body:getType() == "dynamic" then
-                mouseJoint = love.physics.newMouseJoint(body, wx, wy)
-                mouseJoint:setMaxForce(1000 * body:getMass())
-                break
-            end
-        end
-    end
-end
+### Exercise 10
 
-function love.mousereleased(x, y, button)
-    if button == 1 and mouseJoint then
-        mouseJoint:destroy()
-        mouseJoint = nil
-    end
-end
-
-function love.update(dt)
-    if mouseJoint then
-        -- Update target to follow mouse
-        mouseJoint:setTarget(mouseX, mouseY)
-    end
-    world:update(dt)
-end
-```
-
-### Exercise 9
-
-Create a simple pendulum: a dynamic body connected to a static body by a revolute joint. Set the joint to have limits so the pendulum swings back and forth. Add a motor to make it swing continuously.
+Create a double pendulum — two revolute joints connected in series. Observe how the motion becomes chaotic for certain initial conditions.
 
 <details>
 <summary>Solution</summary>
@@ -1664,260 +1690,179 @@ Create a simple pendulum: a dynamic body connected to a static body by a revolut
 function love.load()
     world = love.physics.newWorld(0, 9.81 * 30, true)
 
-    -- Pivot point (static)
-    local pivot = love.physics.newBody(world, 400, 100, "static")
+    -- Anchor point (static)
+    local anchor = love.physics.newBody(world, 512, 50, "static")
 
-    -- Pendulum bob
-    local bob = {}
-    bob.body = love.physics.newBody(world, 400, 300, "dynamic")
-    bob.shape = love.physics.newCircleShape(15)
-    bob.fixture = love.physics.newFixture(bob.body, bob.shape, 1)
-    bob.fixture:setRestitution(0.2)
-    bob.fixture:setFriction(0.3)
-    bob.radius = 15
+    -- First arm (dynamic)
+    local arm1 = {}
+    arm1.body = love.physics.newBody(world, 512, 250, "dynamic")
+    arm1.shape = love.physics.newRectangleShape(10, 200)
+    arm1.fixture = love.physics.newFixture(arm1.body, arm1.shape, 1)
+    arm1.fixture:setFriction(0.3)
+    arm1.fixture:setRestitution(0.2)
+    arm1.radius = 0
 
-    -- Distance joint acts as a pendulum (fixed length)
-    pendulum = love.physics.newDistanceJoint(
-        pivot, bob.body,
-        400, 100,  -- anchor on pivot
-        400, 300   -- anchor on bob
+    -- First revolute joint (anchor to arm1)
+    local joint1 = love.physics.newRevoluteJoint(
+        anchor, arm1.body,
+        512, 50,  -- anchor on anchor body
+        512, 250, -- anchor on arm1 body
+        false
     )
-    pendulum:setLength(200)  -- meters
-    pendulum:setDamping(0.01)  -- slight damping
 
-    -- Alternatively, use a revolute joint:
-    -- revolute = love.physics.newRevoluteJoint(pivot, bob.body, 400, 100)
-    -- revolute:enableLimit(true)
-    -- revolute:setLowerAngle(-math.pi/3)  -- -60 degrees
-    -- revolute:setUpperAngle(math.pi/3)   -- +60 degrees
+    -- Second arm (dynamic)
+    local arm2 = {}
+    arm2.body = love.physics.newBody(world, 512, 450, "dynamic")
+    arm2.shape = love.physics.newRectangleShape(10, 200)
+    arm2.fixture = love.physics.newFixture(arm2.body, arm2.shape, 1)
+    arm2.fixture:setFriction(0.3)
+    arm2.fixture:setRestitution(0.2)
+    arm2.radius = 0
+
+    -- Second revolute joint (arm1 to arm2)
+    local joint2 = love.physics.newRevoluteJoint(
+        arm1.body, arm2.body,
+        512, 250, -- anchor on arm1 body
+        512, 450, -- anchor on arm2 body
+        false
+    )
+end
+
+function love.update(dt)
+    world:update(dt)
 end
 
 function love.draw()
-    -- Pivot
-    love.graphics.setColor(0, 1, 0)
-    love.graphics.circle("fill", 400, 100, 5)
-
-    -- Bob
-    love.graphics.setColor(1, 0, 0)
-    love.graphics.circle("fill", bob.body:getX(), bob.body:getY(), bob.radius)
-
-    -- Rod
+    -- Draw arms
     love.graphics.setColor(0.5, 0.5, 0.5)
-    love.graphics.line(400, 100, bob.body:getX(), bob.body:getY())
+    love.graphics.rectangle("fill", 507, 50, 10, 200)  -- anchor (static)
+    love.graphics.setColor(0.7, 0.7, 1)
+    love.graphics.rectangle("fill", arm1.body:getX() - 5, arm1.body:getY(), 10, 200)
+    love.graphics.setColor(0.7, 1, 0.7)
+    love.graphics.rectangle("fill", arm2.body:getX() - 5, arm2.body:getY(), 10, 200)
     love.graphics.setColor(1, 1, 1)
 end
 ```
 
-The period of a simple pendulum is:
-```
-T = 2π * sqrt(L / g)
-```
-
-With `L = 2` meters and `g = 9.81 m/s²`:
-```
-T = 2π * sqrt(2/9.81) ≈ 2π * 0.451 ≈ 2.84 seconds
-```
-
-This is independent of mass — a heavier bob swings at the same rate as a lighter one. This is Galileo's discovery, and it's why pendulum clocks work.
+A double pendulum is a classic example of chaotic motion. Small changes in initial conditions lead to dramatically different trajectories. This is why weather prediction is so difficult — the atmosphere is a chaotic system.
 </details>
 
 ---
 
-## 11. Chapter 11 — Raycasting, Sensors, and Queries
+## 12. Chapter 11 — Raycasting, Sensors, and Queries
 
-### Raycasting: shooting a line and finding what it hits
+### Raycasting concepts
 
-A raycast casts an infinite line from point A to point B and reports all fixtures it intersects. This is how you implement:
-- Line of sight
-- Shooting/ray weapons
-- Visibility checks
-- "What's under the mouse cursor?"
+A ray is defined by two points (start and end). Box2D returns the first fixture hit, plus:
+- Hit point (x, y)
+- Collision normal (direction the surface faces)
+- Fraction (how far along the ray the hit occurred, 0-1)
 
-```lua
--- Cast a ray and get the closest fixture hit
-local result = world:rayCast(x1, y1, x2, y2, callback)
+Raycasting is used for: line of sight, shooting, visibility checks.
 
--- callback(fixture, x, y, normal, fraction)
---   fixture: the fixture hit
---   x, y: the point of intersection
---   normal: the collision normal at the hit point
---   fraction: how far along the ray the hit occurred (0 = start, 1 = end)
--- Return 0 to stop the ray, fraction to continue, or -1 to ignore
+### Sensor concepts
 
-function rayCallback(fixture, x, y, normal, fraction)
-    print("Hit:", fixture:getBody():getType(), "at", x, y)
-    return fraction  -- continue to find the closest hit
-end
-```
+A sensor is a fixture that detects overlap but doesn't collide. Used for: trigger zones, pickup detection, proximity alerts.
 
-### Sensors: detecting overlap without physical response
+### Dummy value walkthrough — Ray cast:
 
-A sensor is a fixture that detects when other fixtures enter, stay in, or leave its area — but doesn't generate collision forces. Perfect for:
-- Trigger zones (e.g., "enter danger area")
-- Pickup collection zones
-- Proximity detection
-- Seeing if a player is "in range"
+Ray from (100, 384) to (900, 384) — horizontal line at y=384
+If Box 1 is at (300, 300) with size 30x30:
+  Box spans from (285, 285) to (315, 315)
+  Ray at y=384 misses the box (384 > 315)
+  Result: no hit, no ray hits
 
-```lua
-local sensorFixture = love.physics.newFixture(body, shape, 1)
-sensorFixture:setSensor(true)
+If we move the ray to y=300:
+  Ray enters Box 1 at x=285, exits at x=315
+  Hit point: (285, 300)
+  Normal: (-1, 0) — the left face of the box
+  Fraction: (285-100)/(900-100) = 185/800 = 0.231
 
--- In contact callbacks:
-function beginContact(a, b, contact)
-    if a:isSensor() or b:isSensor() then
-        -- This is a sensor overlap, not a physical collision
-        -- No forces are applied, but the contact event still fires
-        print("Sensor overlap!")
-    end
-end
-```
+### Dummy value walkthrough — Sensor:
 
-### Queries: finding fixtures in a region
+Sensor is a circle at (512, 384) with radius 80
+Sensor spans from (432, 304) to (592, 464)
+Box 1 at (300, 300) with size 30x30:
+  Box center at (300, 300), box spans (285,285)-(315,315)
+  Distance from sensor center to box center:
+    sqrt((512-300)² + (384-300)²) = sqrt(44944+7056) = sqrt(52000) ≈ 228
+  228 > 80 → Box 1 is NOT in the sensor zone
+If Box 1 moves to (500, 384):
+  Distance = sqrt((512-500)² + (384-384)²) = sqrt(144) = 12
+  12 < 80 → Box 1 IS in the sensor zone → "IN SENSOR!" displayed
 
-```lua
--- Point query: find all fixtures at a point
-local fixtures = world:queryPoint(x, y)
+### Exercise 11
 
--- AABB query: find all fixtures in a rectangle
-local fixtures = world:queryAABB(x1, y1, x2, y2)
-
--- Shape query: find all fixtures overlapping a shape
-local fixtures = world:queryShape(shape, x, y, angle)
-```
-
-### Exercise 10
-
-Create a "proximity mine" — a circular sensor that detects when a dynamic body enters it and then explodes (applies an impulse to all nearby bodies).
+Create a raycaster that shoots toward the mouse cursor. When the ray hits a body, apply a force at the hit point in the direction of the normal. This simulates a "push" effect.
 
 <details>
 <summary>Solution</summary>
 
 ```lua
-local mines = {}
+function love.mousepressed(x, y, button)
+    if button == 1 then
+        -- Cast a ray from the center of the screen to the mouse
+        local startX, startY = 512, 384
+        local dx = x - startX
+        local dy = y - startY
+        local dist = math.sqrt(dx^2 + dy^2)
 
-function createMine(world, x, y)
-    local mine = {}
-    mine.x = x
-    mine.y = y
-    mine.radius = 50
-    mine.exploded = false
-
-    -- Visual body (static, for drawing)
-    mine.body = love.physics.newBody(world, x, y, "static")
-    mine.shape = love.physics.newCircleShape(mine.radius)
-    mine.sensor = love.physics.newFixture(mine.body, mine.shape, 1)
-    mine.sensor:setSensor(true)
-    mine.sensor:setUserData("mine")
-
-    table.insert(mines, mine)
-    return mine
-end
-
-function beginContact(a, b, contact)
-    -- Check if one of the fixtures is a mine sensor
-    local sensor = nil
-    local otherFixture = nil
-
-    if a:getUserData() == "mine" then
-        sensor = a
-        otherFixture = b
-    elseif b:getUserData() == "mine" then
-        sensor = b
-        otherFixture = a
-    end
-
-    if sensor and otherFixture then
-        local otherBody = otherFixture:getBody()
-        if otherBody:getType() == "dynamic" then
-            -- Explode! Apply impulse away from mine center
-            local mx, my = sensor:getBody():getPosition()
-            local ox, oy = otherBody:getPosition()
-            local dx = ox - mx
-            local dy = oy - my
-            local dist = math.sqrt(dx*dx + dy*dy)
-            if dist < 0.01 then dist = 0.01 end
-
-            local explosionForce = 500
-            local impulse = explosionForce / dist
-            otherBody:applyLinearImpulse(
-                dx * impulse,
-                dy * impulse
-            )
-        end
+        -- Ray cast
+        local hit = world:rayCast(startX, startY, x, y,
+            function(fixture, hitX, hitY, normal, fraction)
+                -- Apply force at the hit point
+                local body = fixture:getBody()
+                body:applyLinearImpulse(
+                    normal.x * 500 * body:getMass(),
+                    normal.y * 500 * body:getMass(),
+                    hitX, hitY
+                )
+                return 0  -- Stop at first hit
+            end
+        )
     end
 end
 ```
+
+The ray cast returns the first fixture hit. We apply an impulse at the hit point in the direction of the collision normal. The force is proportional to the body's mass, so heavier objects are pushed less (they have more inertia).
 </details>
 
 ---
 
-## 12. Chapter 12 — Performance, Warm Starting, and Tuning
+## 13. Chapter 12 — Performance, Warm Starting, and Tuning
 
-### The warm-starting trick
+### Warm starting
 
-Box2D uses "warm starting" — it remembers the impulses applied in the previous frame and uses them as the initial guess for the current frame's solver. This dramatically speeds up convergence.
+Box2D remembers impulses from the previous frame and uses them as an initial guess for the solver. This dramatically speeds up convergence.
 
-**Sleeping** is related: bodies that have been at rest for a while are put to "sleep" and excluded from simulation until they're woken by a collision. This can save enormous amounts of computation in scenes with many static objects.
+### Sleeping
 
-```lua
--- Enable/disable sleeping
-world = love.physics.newWorld(0, 9.81 * 30, true)  -- true = allow sleeping
+Bodies at rest are excluded from simulation until woken by a collision. Huge performance win.
 
--- Wake a sleeping body
-body:setAwake(true)
+### Fixed timestep
 
--- Check if a body is sleeping
-if body:isSleeping() then
-    -- Don't process this body this frame
-end
-```
+Physics runs at a constant rate regardless of frame rate, ensuring determinism and stability.
 
-### Fixed timestep and substeps
+### Dummy value walkthrough — 100 boxes stacked:
 
-Variable `dt` causes non-deterministic physics. The accumulator pattern (shown in Chapter 5) is essential. But what if the frame rate drops so low that `dt` exceeds your fixed step?
+10 columns × 10 rows = 100 dynamic bodies
+Each box: 30x30 pixels, density=1
+Mass per box ≈ 30*30*1 = 900 (in Box2D units)
+Total mass in scene ≈ 90,000
 
-The accumulator caps `dt` at a maximum (e.g., 0.25 seconds) to prevent the "spiral of death" — where the physics can never catch up because each step takes longer than the frame.
+Profile data (typical values):
+  Step time: ~0.1ms for 100 boxes
+  Collide time: ~0.05ms (broad-phase eliminates most pairs)
+  Solve time: ~0.03ms (warm starting helps convergence)
 
-### Tuning velocity and position iterations
+After the stack settles:
+  ~90 bodies go to sleep
+  Only ~10 active bodies are simulated
+  Step time drops to ~0.02ms (5x faster!)
 
-The constraint solver iterates to converge on a solution. More iterations = more accurate but slower:
+### Exercise 12
 
-```lua
--- In love.update:
-world:update(dt, 8, 3)  -- velocityIters, positionIters
-
--- For stacking (many objects on top of each other):
-world:update(dt, 10, 8)  -- More position iterations for better stacking
-
--- For joints (ragdolls, chains):
-world:update(dt, 12, 6)  -- More velocity iterations for joint accuracy
-```
-
-### Profiling your physics
-
-```lua
--- Box2D provides profiling data
-print("Step time:", world:getProfile().step)
-print("Collide time:", world:getProfile().collide)
-print("Solve time:", world:getProfile().solve)
-print("Solve init time:", world:getProfile().solveInit)
-print("Solve velocity time:", world:getProfile().solveVelocity)
-print("Solve position time:", world:getProfile().solvePosition)
-print("Broad-phase time:", world:getProfile().broadphase)
-```
-
-### Common performance pitfalls
-
-1. **Too many fixtures**: Each fixture adds collision-checking overhead. Merge fixtures where possible.
-2. **Too many small bodies**: Each body has its own update cost. Use a single body with multiple fixtures for complex shapes.
-3. **No sleeping**: If everything is always awake, nothing gets a free pass.
-4. **CCD on everything**: Bullet flag is expensive. Only use it for fast-moving objects.
-5. **Too many joints**: Each joint adds solver iterations. Minimize joints where possible.
-6. **Collision filtering done wrong**: Use categories and masks to avoid unnecessary collision checks.
-
-### Exercise 11
-
-Create a scene with 100 boxes stacked in a pile and measure the step time. Then enable sleeping and observe the performance difference once the pile settles.
+Create a scene with 200 boxes stacked in a 10x20 grid. Observe how warm starting makes the solver converge faster each frame. Then disable warm starting and observe the difference.
 
 <details>
 <summary>Solution</summary>
@@ -1929,883 +1874,385 @@ function love.load()
     -- Ground
     local ground = love.physics.newBody(world, 400, 550, "static")
     local groundShape = love.physics.newRectangleShape(800, 20)
-    love.physics.newFixture(ground, groundShape, 1)
+    local groundFixture = love.physics.newFixture(ground, groundShape, 1)
+    groundFixture:setFriction(0.3)
+    groundFixture:setRestitution(0.1)
 
-    -- Stack of 100 boxes
-    boxes = {}
-    local boxSize = 20  -- pixels
+    -- 10x20 grid of boxes
     local cols = 10
-    for i = 1, 100 do
-        local col = (i - 1) % cols
-        local row = math.floor((i - 1) / cols)
-        local body = love.physics.newBody(world, 300 + col * boxSize, 500 - row * boxSize, "dynamic")
-        local shape = love.physics.newRectangleShape(boxSize, boxSize)
-        local fixture = love.physics.newFixture(body, shape, 1)
-        fixture:setFriction(0.3)
-        fixture:setRestitution(0.1)
-        table.insert(boxes, body)
+    local rows = 20
+    local boxW, boxH = 30, 30
+
+    for row = 0, rows - 1 do
+        for col = 0, cols - 1 do
+            local x = 300 + col * boxW
+            local y = 680 - row * boxH
+            local body = love.physics.newBody(world, x, y, "dynamic")
+            local shape = love.physics.newRectangleShape(boxW, boxH)
+            local fixture = love.physics.newFixture(body, shape, 1)
+            fixture:setFriction(0.3)
+            fixture:setRestitution(0.1)
+        end
     end
 end
 
 function love.update(dt)
     world:update(dt)
+end
 
-    -- Print profile data every 60 frames
-    if love.getTimer() % 1 < dt then
-        local profile = world:getProfile()
-        print(string.format("Step: %.2fμs, Collide: %.2fμs, Solve: %.2fμs",
-            profile.step * 1e6, profile.collide * 1e6, profile.solve * 1e6))
+function love.draw()
+    -- Draw all bodies
+    for _, body in ipairs(world:getBodies()) do
+        if body:getType() == "dynamic" then
+            for _, fixture in ipairs(body:getFixtureList()) do
+                local shape = fixture:getShape()
+                if shape:getType() == "Rectangle" then
+                    local w, h = shape:getDimensions()
+                    love.graphics.setColor(0.5, 0.5, 0.8)
+                    love.graphics.polygon("fill", body:getWorldPoints(shape:getPoints()))
+                end
+            end
+        end
     end
+    love.graphics.setColor(1, 1, 1)
 end
 ```
 
-After the pile settles, most boxes go to sleep and the step time drops dramatically. The solver only needs to process the few boxes that are still moving or in contact with active bodies.
+Warm starting makes the solver converge in fewer iterations. For a stack of 200 boxes, warm starting can reduce the solve time by 3-5x compared to cold starting.
 </details>
 
 ---
 
-## 13. Chapter 13 — Advanced Topics
+## 14. Chapter 13 — Advanced Topics
 
-### Custom forces: springs, dampers, and attraction
+### Custom forces: Springs
 
-Box2D doesn't have built-in spring joints (except the `DistanceJoint` with stiffness/damping). For custom forces, apply them each frame:
+Hooke's Law: F = -k * x
 
-#### Hooke's Law (spring force)
-
-```
-F = -k * (x - x₀) - c * v
-```
-
-where:
-- `k` is the spring constant (stiffness)
-- `x₀` is the rest length
-- `c` is the damping coefficient
-- `v` is the velocity along the spring axis
-
-```lua
-function applySpring(body, anchorX, anchorY, restLength, stiffness, damping)
-    local bx, by = body:getPosition()
-    local vx, vy = body:getLinearVelocity()
-
-    local dx = bx - anchorX
-    local dy = by - anchorY
-    local dist = math.sqrt(dx * dx + dy * dy)
-    if dist < 0.001 then return end
-
-    -- Spring force (Hooke's law)
-    local springForce = -stiffness * (dist - restLength)
-
-    -- Damping force (proportional to velocity along spring axis)
-    local vxAlong = (dx / dist) * vx + (dy / dist) * vy
-    local dampForce = -damping * vxAlong
-
-    -- Total force along spring direction
-    local totalForce = springForce + dampForce
-    local fx = totalForce * dx / dist
-    local fy = totalForce * dy / dist
-
-    body:applyForce(fx, fy)
-end
-```
-
-This is how you build:
-- Bungee cords (spring with a maximum length)
-- Rope physics (distance constraint with damping)
-- Character controllers (spring-based ground detection)
-- Camera follow (spring smoothing)
+The spring force is proportional to the displacement from the rest length and points toward the anchor.
 
 ### Buoyancy
 
-For underwater physics, you need to apply an upward buoyancy force:
+Buoyancy is the upward force exerted by a fluid on an immersed object. It equals the weight of the fluid displaced by the object.
 
-```
-F_buoyancy = ρ * g * V_submerged * upward
-```
+### Soft bodies
 
-where `ρ` is fluid density, `g` is gravity, and `V_submerged` is the submerged volume.
+Soft bodies are simulated using chains of distance joints. Each link acts like a small rigid body connected to its neighbors.
 
-In practice, for a 2D game, you approximate this by checking how much of a body is below the water line and applying a proportional upward force plus drag:
+### Dummy value walkthrough — Spring:
 
-```lua
-function applyBuoyancy(body, waterY, fluidDensity, gravity)
-    local bx, by = body:getPosition()
-    local shape = body:getFixtureList()
-    local aabb = shape:getAABB()  -- approximate bounding box
+Mass at (100, 400), anchor at (100, 100)
+dx = 0, dy = 300, dist = 300
+displacement = 300 - 200 = 100 (spring stretched 100px)
+springFx = -50 * 100 * 0/300 = 0 (no horizontal force)
+springFy = -50 * 100 * 300/300 = -5000 (upward force)
+If vy = 50 (moving down):
+  dampFy = -2 * 50 = -100 (upward, opposing motion)
+Total: F = (0, -5100) → mass accelerates upward
 
-    -- How far is the body below water?
-    local submersionDepth = (aabb.lowerBound.y + aabb.upperBound.y) / 2 - waterY
+### Exercise 13
 
-    if submersionDepth > 0 then
-        -- Approximate submerged area
-        local width = aabb.upperBound.x - aabb.lowerBound.x
-        local submergedArea = width * submersionDepth
-
-        -- Buoyancy force (upward)
-        local buoyancyForce = fluidDensity * gravity * submergedArea
-        body:applyForce(0, -buoyancyForce)
-
-        -- Drag (simplified)
-        local vx, vy = body:getLinearVelocity()
-        local dragCoeff = 0.5
-        body:applyForce(-dragCoeff * vx, -dragCoeff * vy)
-    end
-end
-```
-
-### Soft bodies (approximation)
-
-True soft-body physics is complex. A common game approximation is to use a chain of distance joints connecting circle bodies:
-
-```lua
-function createSoftBody(world, x, y, numPoints, radius, stiffness)
-    local bodies = {}
-    local joints = {}
-
-    -- Create circle bodies in a line
-    for i = 0, numPoints - 1 do
-        local body = love.physics.newBody(world, x + i * radius * 2, y, "dynamic")
-        local shape = love.physics.newCircleShape(radius)
-        local fixture = love.physics.newFixture(body, shape, 1)
-        fixture:setFriction(0.3)
-        fixture:setRestitution(0.3)
-        table.insert(bodies, body)
-    end
-
-    -- Connect with distance joints
-    for i = 1, #bodies - 1 do
-        local j = love.physics.newDistanceJoint(
-            bodies[i], bodies[i+1],
-            bodies[i]:getX(), bodies[i]:getY(),
-            bodies[i+1]:getX(), bodies[i+1]:getY(),
-            false
-        )
-        j:setLength(radius * 2)
-        j:setStiffness(stiffness)
-        j:setDamping(1)
-        table.insert(joints, j)
-    end
-
-    return bodies, joints
-end
-```
-
-### Custom collision filtering with user data
-
-Attach Lua tables to fixtures and bodies for game-specific logic:
-
-```lua
-local player = {health = 100, score = 0}
-
-local playerBody = love.physics.newBody(world, 100, 100, "dynamic")
-local playerShape = love.physics.newCircleShape(15)
-local playerFixture = love.physics.newFixture(playerBody, playerShape, 1)
-playerFixture:setUserData(player)
-
-function beginContact(a, b, contact)
-    local udA = a:getUserData()
-    local udB = b:getUserData()
-
-    if udA and udB then
-        -- Both fixtures have user data — handle game logic
-        if udA.type == "bullet" and udB.type == "enemy" then
-            -- Bullet hit enemy!
-            udB.health = udB.health - 25
-            udA.body:destroy()  -- Destroy the bullet
-        end
-    end
-end
-```
-
-### Continuous physics and the "bullet" flag
-
-We covered this in Chapter 8, but here's a deeper look at when to use it:
-
-- **Use CCD** for: bullets, fast projectiles, thin platforms, any object moving faster than its own size per frame
-- **Don't use CCD** for: normal-speed objects (wastes computation)
-
-The cost of CCD is roughly 2-3x the cost of normal collision detection for that body. Use it sparingly.
-
-### Time of impact (TOI)
-
-Box2D can compute the time of impact — the exact moment when two moving objects will first collide. This is used internally for CCD but can also be used for gameplay logic:
-
-```lua
--- Not a direct API call, but the concept:
--- If a bullet is moving at 1000 m/s toward a target 50m away,
--- TOI = 50/1000 = 0.05 seconds
--- You can use this to predict where the target will be
-```
-
-### Gravity scales per body
-
-Individual bodies can have their own gravity scale:
-
-```lua
-body:setGravityScale(0)   -- No gravity (floats)
-body:setGravityScale(2)   -- Double gravity (heavy feeling)
-body:setGravityScale(-1)  -- Anti-gravity (floats up)
-```
-
-This is useful for:
-- Floating platforms (gravity scale 0)
-- Heavy objects (gravity scale 2)
-- Bubbles or balloons (negative gravity scale)
-- Low-gravity environments (gravity scale 0.3)
-
-### Damping: linear and angular
-
-Box2D supports velocity damping that naturally slows objects:
-
-```lua
-body:setLinearDamping(0.5)   -- Linear velocity decays exponentially
-body:setAngularDamping(0.5)  -- Angular velocity decays exponentially
-```
-
-The damping model is:
-```
-v(t) = v₀ * e^(-damping * t)
-```
-
-This is exponential decay — velocity halves every `ln(2)/damping` seconds. With damping 0.5, velocity halves every ~1.4 seconds.
-
-### Exercise 12
-
-Build a simple "blob" physics object: a central body connected to 8 surrounding bodies by distance joints with stiffness and damping. The blob should deform when hitting a wall and spring back to its circular shape.
+Create a soft body simulation using a chain of distance joints. Add a wind force that pushes the soft body sideways. Observe how the soft body deforms and oscillates.
 
 <details>
 <summary>Solution</summary>
 
 ```lua
-function createBlob(world, x, y, numPoints, radius, stiffness, damping)
-    local bodies = {}
-    local joints = {}
+function love.load()
+    world = love.physics.newWorld(0, 9.81 * 30, true)
 
-    -- Center body
-    local center = {}
-    center.body = love.physics.newBody(world, x, y, "dynamic")
-    center.shape = love.physics.newCircleShape(radius * 0.8)
-    center.fixture = love.physics.newFixture(center.body, center.shape, 2)
-    center.fixture:setFriction(0.5)
-    center.fixture:setRestitution(0.3)
-    table.insert(bodies, center)
+    -- Create a chain of 6 links
+    local numLinks = 6
+    local linkLength = 20
+    local startX, startY = 512, 100
 
-    -- Surrounding bodies
-    for i = 0, numPoints - 1 do
-        local angle = 2 * math.pi * i / numPoints
-        local bx = x + radius * math.cos(angle)
-        local by = y + radius * math.sin(angle)
+    -- Anchor (static)
+    local anchor = love.physics.newBody(world, startX, startY, "static")
 
-        local b = {}
-        b.body = love.physics.newBody(world, bx, by, "dynamic")
-        b.shape = love.physics.newCircleShape(radius * 0.5)
-        b.fixture = love.physics.newFixture(b.body, b.shape, 1)
-        b.fixture:setFriction(0.5)
-        b.fixture:setRestitution(0.3)
-        table.insert(bodies, b)
+    -- Create each link
+    local prevBody = anchor
+    for i = 1, numLinks do
+        local body = love.physics.newBody(world, startX, startY + i * linkLength, "dynamic")
+        local shape = love.physics.newCircleShape(8)
+        local fixture = love.physics.newFixture(body, shape, 1)
+        fixture:setFriction(0.3)
+        fixture:setRestitution(0.2)
 
-        -- Distance joint from center to this point
-        local j = love.physics.newDistanceJoint(
-            center.body, b.body,
-            x, y, bx, by,
+        -- Distance joint connects this link to the previous one
+        local joint = love.physics.newDistanceJoint(
+            prevBody, body,
+            startX, startY + (i-1) * linkLength,
+            startX, startY + i * linkLength,
             false
         )
-        j:setLength(radius)
-        j:setStiffness(stiffness)
-        j:setDamping(damping)
-        table.insert(joints, j)
+        joint:setLength(linkLength)
+        joint:setStiffness(5)
+        joint:setDamping(1)
 
-        -- Distance joint between adjacent outer points (for structural integrity)
-        if i > 0 then
-            local prev = bodies[#bodies - 1]  -- previous outer body
-            local j2 = love.physics.newDistanceJoint(
-                prev.body, b.body,
-                prev.body:getX(), prev.body:getY(),
-                bx, by,
-                false
-            )
-            j2:setLength(radius * 2 * math.sin(math.pi / numPoints))
-            j2:setStiffness(stiffness * 0.5)
-            j2:setDamping(damping * 0.5)
-            table.insert(joints, j2)
+        prevBody = body
+    end
+end
+
+function love.update(dt)
+    -- Apply wind force to all dynamic bodies
+    for _, body in ipairs(world:getBodies()) do
+        if body:getType() == "dynamic" then
+            body:applyForce(100, 0)  -- Wind pushing right
         end
     end
+    world:update(dt)
+end
 
-    -- Close the loop
-    if numPoints > 2 then
-        local first = bodies[2]  -- first outer body
-        local last = bodies[#bodies]  -- last outer body
-        local j = love.physics.newDistanceJoint(
-            first.body, last.body,
-            first.body:getX(), first.body:getY(),
-            last.body:getX(), last.body:getY(),
-            false
-        )
-        j:setLength(radius * 2 * math.sin(math.pi / numPoints))
-        j:setStiffness(stiffness * 0.5)
-        j:setDamping(damping * 0.5)
-        table.insert(joints, j)
+function love.draw()
+    for _, body in ipairs(world:getBodies()) do
+        if body:getType() == "dynamic" then
+            love.graphics.setColor(0.7, 1, 0.7)
+            love.graphics.circle("fill", body:getX(), body:getY(), 8)
+        end
     end
-
-    return bodies, joints
+    love.graphics.setColor(1, 1, 1)
 end
 ```
 
-When this blob hits a wall, the outer bodies deform inward while the center maintains momentum. The springs pull everything back to the circular shape. Adjust `stiffness` for a stiff blob (like a ball) or a soft blob (like a water droplet).
+The wind force pushes the soft body to the right. The distance joints resist stretching, causing the body to deform and oscillate. The damping in the joints causes the oscillations to gradually die out.
 </details>
 
 ---
 
-## 14. Appendix A — Formulae Quick Reference
+## Appendix A — Formulae Quick Reference
+
+### Vectors
+
+| Operation | Formula |
+|-----------|---------|
+| Magnitude | `|v| = sqrt(vx² + vy²)` |
+| Dot product | `a · b = ax*bx + ay*by` |
+| Cross product (2D) | `a × b = ax*by - ay*bx` |
+| Normalize | `v̂ = v / |v|` |
+| Angle | `θ = atan2(vy, vx)` |
+
+### Newton's Laws
+
+| Law | Formula |
+|-----|---------|
+| Second Law | `F = m * a` |
+| Gravity | `F = m * g` |
+| Drag | `F_drag = -k * |v| * v` |
+| Spring (Hooke's Law) | `F = -k * x` |
 
 ### Kinematics
 
 | Equation | Formula |
 |----------|---------|
-| Velocity | `v = v₀ + a*t` |
-| Position | `p = p₀ + v₀*t + ½*a*t²` |
-| Velocity² | `v² = v₀² + 2*a*(p - p₀)` |
-| Average velocity | `v_avg = (v₀ + v) / 2` |
-
-### Dynamics
-
-| Equation | Formula |
-|----------|---------|
-| Newton's 2nd Law | `F = m*a` |
-| Weight | `W = m*g` |
-| Momentum | `p = m*v` |
-| Impulse | `J = F*Δt = Δp` |
-| Kinetic Energy | `KE = ½*m*v²` |
-| Potential Energy | `PE = m*g*h` |
-| Work | `W = F*d*cos(θ)` |
-| Power | `P = W/t = F*v` |
+| Velocity | `v = v₀ + a * t` |
+| Position | `p = p₀ + v₀ * t + 0.5 * a * t²` |
+| Velocity² | `v² = v₀² + 2 * a * (p - p₀)` |
+| Range | `R = v₀² * sin(2θ) / g` |
+| Max Height | `H = v₀² * sin²(θ) / (2g)` |
+| Time of Flight | `T = 2 * v₀ * sin(θ) / g` |
 
 ### Collision
 
-| Equation | Formula |
+| Concept | Formula |
+|---------|---------|
+| Impulse | `j = -(1+e) * (v_rel · n) / (1/m₁ + 1/m₂)` |
+| Restitution | `e = |v_separation| / |v_approach|` |
+| Energy lost | `ΔKE = 0.5 * (1 - e²) * reduced_mass * v_rel²` |
+
+### Pendulum
+
+| Quantity | Formula |
 |----------|---------|
-| Coefficient of restitution | `e = |v₂' - v₁'| / |v₁ - v₂|` |
-| Impulse magnitude | `j = -(1+e) * (v_rel · n) / (1/m₁ + 1/m₂)` |
-| Perfectly elastic KE conserved | `½m₁v₁² + ½m₂v₂² = ½m₁v₁'² + ½m₂v₂'²` |
-| Perfectly inelastic | `v' = (m₁v₁ + m₂v₂) / (m₁ + m₂)` |
-
-### Gravity
-
-| Equation | Formula |
-|----------|---------|
-| Newton's law | `F = G*m₁*m₂ / r²` |
-| Gravitational PE | `PE = -G*m₁*m₂ / r` |
-| Escape velocity | `v_esc = sqrt(2*G*M/r)` |
-| Orbital velocity | `v_orb = sqrt(G*M/r)` |
-| Orbital period | `T = 2π*sqrt(r³/(G*M))` |
-
-### Springs
-
-| Equation | Formula |
-|----------|---------|
-| Hooke's Law | `F = -k*x` |
-| Spring PE | `PE = ½*k*x²` |
-| Damped spring | `F = -k*x - c*v` |
-| Natural frequency | `ω = sqrt(k/m)` |
-| Damping ratio | `ζ = c / (2*sqrt(k*m))` |
-
-### Circular Motion
-
-| Equation | Formula |
-|----------|---------|
-| Centripetal acceleration | `a = v²/r = ω²*r` |
-| Centripetal force | `F = m*v²/r` |
-| Angular velocity | `ω = Δθ/Δt` |
-| Period | `T = 2π/ω` |
-
-### Projectile Motion
-
-| Equation | Formula |
-|----------|---------|
-| Range | `R = v₀²*sin(2θ)/g` |
-| Max height | `H = v₀²*sin²(θ)/(2g)` |
-| Time of flight | `T = 2*v₀*sin(θ)/g` |
-| Trajectory | `y = x*tan(θ) - g*x²/(2*v₀²*cos²(θ))` |
-
-### Fluid (Buoyancy)
-
-| Equation | Formula |
-|----------|---------|
-| Buoyancy force | `F_b = ρ*g*V_displaced` |
-| Archimedes' principle | Buoyant force = weight of displaced fluid |
+| Period | `T = 2π√(L/g)` |
+| Angular frequency | `ω = sqrt(g/L)` |
 
 ---
 
-## 15. Appendix B — LÖVE2D love.physics API Reference
+## Appendix B — LÖVE2D love.physics API Reference
 
 ### World
 
-```lua
-world = love.physics.newWorld(gx, gy, allowSleep)
-world:update(dt, velocityIterations, positionIterations)
-world:setCallbacks(beginContact, endContact, preSolve, postSolve)
-world:queryPoint(x, y)
-world:queryAABB(x1, y1, x2, y2)
-world:queryShape(shape, x, y, angle)
-world:rayCast(x1, y1, x2, y2, callback)
-world:getProfile()
-world:setGravity(gx, gy)
-world:getGravity()
-world:setMeter(meter)  -- pixels per meter
-world:getMeter()
-```
+| Method | Description |
+|--------|-------------|
+| `love.physics.newWorld(gx, gy, allowSleep)` | Create a new physics world |
+| `world:update(dt, velocityIterations, positionIterations)` | Step the simulation |
+| `world:setCallbacks(beginContact, endContact, preSolve, postSolve)` | Register collision callbacks |
+| `world:rayCast(x1, y1, x2, y2, callback)` | Cast a ray and return hit info |
+| `world:getProfile()` | Get profiling data for the current step |
+| `world:destroy()` | Destroy the world and all bodies |
 
 ### Body
 
-```lua
-body = love.physics.newBody(world, x, y, type)
-body:setType(type)           -- "static", "dynamic", "kinematic"
-body:setPosition(x, y)
-body:getPosition()
-body:setAngle(angle)         -- radians
-body:getAngle()
-body:setLinearVelocity(vx, vy)
-body:getLinearVelocity()
-body:setAngularVelocity(w)
-body:getAngularVelocity()
-body:applyForce(fx, fy, px, py)
-body:applyLinearImpulse(ix, iy, px, py)
-body:applyTorque(torque)
-body:applyAngularImpulse(impulse)
-body:getMass()
-body:getMassData()
-body:setMassData(data)
-body:setLinearDamping(d)
-body:getLinearDamping()
-body:setAngularDamping(d)
-body:getAngularDamping()
-body:setGravityScale(s)
-body:getGravityScale()
-body:setBullet(enabled)
-body:isBullet()
-body:setAwake(enabled)
-body:isAwake()
-body:isSleeping()
-body:setFixedRotation(enabled)
-body:isFixedRotation()
-body:destroy()
-body:getWorldPoints(...)
-body:getWorldPoint(x, y)
-body:getLocalPoint(x, y)
-body:getWorldVector(x, y)
-body:getLocalVector(x, y)
-body:getX(), body:getY()
-body:getLinearVelocityFromWorldPoint(x, y)
-body:getLinearVelocityFromLocalPoint(x, y)
-```
+| Method | Description |
+|--------|-------------|
+| `love.physics.newBody(world, x, y, type)` | Create a body (static/dynamic/kinematic) |
+| `body:getPosition()` | Get body position `(x, y)` |
+| `body:setPosition(x, y)` | Set body position |
+| `body:getX()` / `body:getY()` | Get individual coordinates |
+| `body:getLinearVelocity()` | Get velocity `(vx, vy)` |
+| `body:setLinearVelocity(vx, vy)` | Set velocity |
+| `body:getMass()` | Get mass in kg |
+| `body:getAngle()` | Get rotation in radians |
+| `body:setAngle(angle)` | Set rotation |
+| `body:applyForce(fx, fy, px, py)` | Apply continuous force |
+| `body:applyLinearImpulse(ix, iy, px, py)` | Apply instantaneous impulse |
+| `body:applyTorque(torque)` | Apply rotational force |
+| `body:applyAngularImpulse(impulse)` | Apply rotational impulse |
+| `body:setBullet(enabled)` | Enable/disable continuous collision detection |
+| `body:isSleeping()` | Check if body is sleeping |
+| `body:wakeUp()` | Wake a sleeping body |
+| `body:destroy()` | Destroy the body |
+
+### Shape
+
+| Method | Description |
+|--------|-------------|
+| `love.physics.newCircleShape(radius)` | Create a circle shape |
+| `love.physics.newRectangleShape(w, h)` | Create a rectangle shape |
+| `love.physics.newPolygonShape(...)` | Create a polygon shape |
+| `love.physics.newEdgeShape(x1, y1, x2, y2)` | Create an edge shape |
+| `shape:getType()` | Get shape type ("Circle", "Polygon", "Rectangle", "Edge") |
+| `shape:getPoints()` | Get polygon vertices |
+| `shape:getDimensions()` | Get rectangle width and height |
+| `shape:getArea()` | Get polygon area |
+| `shape:getRadius()` | Get circle radius |
 
 ### Fixture
 
-```lua
-fixture = love.physics.newFixture(body, shape, density)
-fixture:setDensity(d)
-fixture:getDensity()
-fixture:setFriction(f)
-fixture:getFriction()
-fixture:setRestitution(r)
-fixture:getRestitution()
-fixture:setRestitutionThreshold(v)
-fixture:getRestitutionThreshold()
-fixture:setSensor(isSensor)
-fixture:isSensor()
-fixture:setFilterData(categoryBits, maskBits, groupIndex)
-fixture:getFilterData()
-fixture:setUserData(data)
-fixture:getUserData()
-fixture:getBody()
-fixture:getShape()
-fixture:destroy()
-fixture:testPoint(x, y)
-```
+| Method | Description |
+|--------|-------------|
+| `love.physics.newFixture(body, shape, density)` | Attach a shape to a body |
+| `fixture:setFriction(f)` | Set friction coefficient |
+| `fixture:setRestitution(r)` | Set bounciness (0-1) |
+| `fixture:setDensity(d)` | Set density (kg/m²) |
+| `fixture:setSensor(enabled)` | Set as sensor (no collision response) |
+| `fixture:setUserData(data)` | Attach custom data |
+| `fixture:getUserData()` | Get custom data |
+| `fixture:getBody()` | Get the parent body |
+| `fixture:getShape()` | Get the attached shape |
+| `fixture:getMass()` | Get the fixture's mass contribution |
 
-### Shapes
+### Joint
 
-```lua
-shape = love.physics.newCircleShape(radius)
-shape = love.physics.newRectangleShape(w, h)
-shape = love.physics.newRectangleShape(w, h, cx, cy, angle)
-shape = love.physics.newEdgeShape(x1, y1, x2, y2)
-shape = love.physics.newChainShape(loop, points)
-shape = love.physics.newPolygonShape(points)
-shape:getPoints()
-shape:getType()
-shape:getRadius()  -- for circles
-shape:getChildCount()  -- for polygons
-shape:getChild(index)  -- for chains/polygons
-```
-
-### Joints
-
-```lua
--- Distance
-j = love.physics.newDistanceJoint(bodyA, bodyB, ax1, ay1, ax2, ay2, collideConnected)
-j:setLength(len)
-j:setStiffness(k)
-j:setDamping(d)
-j:setFrequencyHz(hz)
-j:setDampingRatio(ratio)
-
--- Revolute
-j = love.physics.newRevoluteJoint(bodyA, bodyB, anchorX, anchorY, collideConnected)
-j:enableLimit(enabled)
-j:setLowerAngle(angle)
-j:setUpperAngle(angle)
-j:enableMotor(enabled)
-j:setMotorSpeed(speed)
-j:setMaxMotorTorque(torque)
-
--- Prismatic
-j = love.physics.newPrismaticJoint(bodyA, bodyB, anchorX, anchorY, axisX, axisY, collideConnected)
-j:enableLimit(enabled)
-j:setLowerLimit(limit)
-j:setUpperLimit(limit)
-j:enableMotor(enabled)
-j:setMotorSpeed(speed)
-j:setMaxMotorForce(force)
-
--- Pulley
-j = love.physics.newPulleyJoint(bodyA, bodyB, ax1, ay1, ax2, ay2, bx1, by1, bx2, by2, ratio, collideConnected)
-
--- Gear
-j = love.physics.newGearJoint(jointA, jointB, ratio)
-
--- Motor (generic)
-j = love.physics.newMotorJoint(bodyA, bodyB, collideConnected)
-j:setMaxForce(force)
-j:setMaxTorque(torque)
-j:setCorrectionFactor(factor)
-
--- Weld
-j = love.physics.newWeldJoint(bodyA, bodyB, anchorX, anchorY, collideConnected)
-
--- Rope
-j = love.physics.newRopeJoint(bodyA, bodyB, ax1, ay1, ax2, ay2, maxLength, collideConnected)
-
--- Mouse
-j = love.physics.newMouseJoint(body, x, y)
-j:setTarget(x, y)
-j:setMaxForce(force)
-
--- Angle
-j = love.physics.newAngleJoint(bodyA, bodyB, collideConnected)
-j:enableLimit(enabled)
-j:setLowerLimit(angle)
-j:setUpperLimit(angle)
-
--- Fixed
-j = love.physics.newFixedJoint(bodyA, bodyB, x, y, collideConnected)
-
--- Wheel
-j = love.physics.newWheelJoint(bodyA, bodyB, anchorX, anchorY, axisX, axisY, collideConnected)
-j:setMotorSpeed(speed)
-j:setMaxMotorTorque(torque)
-j:setSpringFrequencyHz(hz)
-j:setSpringDampingRatio(ratio)
-
--- Joint utility methods
-j:destroy()
-j:getBodyA(), j:getBodyB()
-j:getCollideConnected()
-j:setCollideConnected(enabled)
-j:getReactionForce(inverseDt)
-j:getReactionTorque(inverseDt)
-```
-
-### Contact
-
-```lua
-contact:getNormal()
-contact:getNormalImpulses()
-contact:getTangentImpulses()
-contact:getFriction()
-contact:setFriction(f)
-contact:getRestitution()
-contact:setRestitution(r)
-contact:getTangentSpeed()
-contact:setTangentSpeed(speed)
-contact:isEnabled()
-contact:setEnabled(enabled)
-contact:getWorldManifold()  -- returns points, normals, depths
-```
+| Method | Description |
+|--------|-------------|
+| `love.physics.newDistanceJoint(bodyA, bodyB, ...)` | Create a distance joint |
+| `love.physics.newRevoluteJoint(bodyA, bodyB, ...)` | Create a revolute joint |
+| `love.physics.newPrismaticJoint(bodyA, bodyB, ...)` | Create a prismatic joint |
+| `joint:setLength(length)` | Set target distance |
+| `joint:setStiffness(stiffness)` | Set spring stiffness |
+| `joint:setDamping(damping)` | Set damping |
+| `joint:enableMotor(enabled)` | Enable/disable motor |
+| `joint:setMotorSpeed(speed)` | Set motor speed |
+| `joint:setMaxMotorTorque(torque)` | Set max motor torque |
+| `joint:destroy()` | Destroy the joint |
 
 ---
 
-## 16. Appendix C — Complete Example Projects
+## Appendix C — Complete Example Projects
 
-### Project 1: Platformer Controller
+### Project 1: Bouncing Ball
 
-```lua
--- main.lua: A complete platformer controller using love.physics
-local world, player, ground
-local GRAVITY = 9.81 * 30
-local MOVE_SPEED = 200
-local JUMP_FORCE = 400
-local playerWidth, playerHeight = 20, 30
-
-function love.load()
-    world = love.physics.newWorld(0, GRAVITY, true)
-
-    -- Ground
-    ground = love.physics.newBody(world, 400, 550, "static")
-    local groundShape = love.physics.newRectangleShape(800, 20)
-    local groundFixture = love.physics.newFixture(ground, groundShape, 1)
-    groundFixture:setFriction(0.6)
-
-    -- Player
-    player = {}
-    player.body = love.physics.newBody(world, 100, 400, "dynamic")
-    player.shape = love.physics.newRectangleShape(playerWidth, playerHeight)
-    player.fixture = love.physics.newFixture(player.body, player.shape, 1)
-    player.fixture:setFriction(0.6)
-    player.fixture:setRestitution(0.1)
-    player.fixture:setUserData("player")
-    player.width = playerWidth
-    player.height = playerHeight
-    player.grounded = false
-    player.canJump = true
-
-    -- Set fixed rotation so player doesn't tumble
-    player.body:setFixedRotation(true)
-
-    -- Input state
-    keys = {}
-
-    world:setCallbacks(beginContact, endContact)
-end
-
-function beginContact(a, b, contact)
-    local uA, uB = a:getUserData(), b:getUserData()
-    if uA == "player" or uB == "player" then
-        -- Check if contact is at the bottom of the player
-        local fixture = (uA == "player") and a or b
-        local otherFixture = (uA == "player") and b or a
-        if fixture == player.fixture then
-            local nx, ny = contact:getNormal()
-            -- If normal points upward (from ground to player), player is grounded
-            if ny < -0.5 then
-                player.grounded = true
-            end
-        end
-    end
-end
-
-function endContact(a, b, contact)
-    local uA, uB = a:getUserData(), b:getUserData()
-    if uA == "player" or uB == "player" then
-        player.grounded = false
-    end
-end
-
-function love.update(dt)
-    -- Fixed timestep
-    world:update(dt)
-
-    -- Horizontal movement
-    local vx = 0
-    if keys["right"] or keys["d"] then vx = MOVE_SPEED end
-    if keys["left"] or keys["a"] then vx = -MOVE_SPEED end
-
-    -- Apply horizontal force (with some acceleration feel)
-    local currentVx = player.body:getLinearVelocity()
-    local targetVx = vx
-    local force = (targetVx - currentVx) * player.body:getMass() * 10
-    player.body:applyForce(force, 0)
-
-    -- Jump
-    if (keys["space"] or keys["up"] or keys["w"]) and player.grounded then
-        player.body:applyLinearImpulse(0, -JUMP_FORCE)
-        player.grounded = false
-    end
-
-    -- Cap velocity (prevent too-fast falling)
-    local vx, vy = player.body:getLinearVelocity()
-    if vy > 500 then vy = 500 end
-    player.body:setLinearVelocity(vx, vy)
-end
-
-function love.keypressed(key)
-    keys[key] = true
-end
-
-function love.keyreleased(key)
-    keys[key] = false
-end
-
-function love.draw()
-    -- Ground
-    love.graphics.setColor(0.4, 0.4, 0.4)
-    love.graphics.polygon("fill", ground:getWorldPoints(groundShape:getPoints()))
-
-    -- Player
-    love.graphics.setColor(0, 0.8, 1)
-    local px, py = player.body:getPosition()
-    love.graphics.rectangle("fill", px - playerWidth/2, py - playerHeight/2, playerWidth, playerHeight)
-
-    -- Ground indicator
-    love.graphics.setColor(1, 1, 0)
-    if player.grounded then
-        love.graphics.print("GROUNDED", px - 30, py - 40)
-    end
-
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.print("Velocity: " .. string.format("%.0f, %.0f", player.body:getLinearVelocity()), 10, 10)
-end
-```
-
-### Project 2: Simple Physics Puzzle (Angry Birds Lite)
+A simple ball that bounces on the ground with configurable restitution.
 
 ```lua
--- main.lua: Launch projectiles at structures
-local world
-local projectile
-local structures = {}
-local trail = {}
-local launching = false
-local launchPower = 500
-local launchAngle = 0
-
 function love.load()
     world = love.physics.newWorld(0, 9.81 * 30, true)
 
-    -- Ground
     local ground = love.physics.newBody(world, 400, 550, "static")
     local groundShape = love.physics.newRectangleShape(800, 20)
-    love.physics.newFixture(ground, groundShape, 1)
+    local groundFixture = love.physics.newFixture(ground, groundShape, 1)
+    groundFixture:setFriction(0.5)
+    groundFixture:setRestitution(0.5)
 
-    -- Structure: stacked boxes
-    local function createStructure(x, y)
-        local s = {}
-        -- Base
-        for i = -2, 2 do
-            local b = love.physics.newBody(world, x + i * 30, y, "dynamic")
-            local shape = love.physics.newRectangleShape(25, 25)
-            local f = love.physics.newFixture(b, shape, 1)
-            f:setFriction(0.4)
-            f:setRestitution(0.2)
-            table.insert(s, b)
-        end
-        -- Second layer (offset)
-        for i = -1, 1 do
-            local b = love.physics.newBody(world, x + i * 30, y - 30, "dynamic")
-            local shape = love.physics.newRectangleShape(25, 25)
-            local f = love.physics.newFixture(b, shape, 1)
-            f:setFriction(0.4)
-            f:setRestitution(0.2)
-            table.insert(s, b)
-        end
-        -- Top
-        local b = love.physics.newBody(world, x, y - 60, "dynamic")
-        local shape = love.physics.newRectangleShape(25, 25)
-        local f = love.physics.newFixture(b, shape, 1)
-        f:setFriction(0.4)
-        f:setRestitution(0.2)
-        table.insert(s, b)
-        return s
-    end
-
-    table.insert(structures, createStructure(500, 480))
-    table.insert(structures, createStructure(600, 480))
-
-    -- Projectile
-    projectile = {}
-    projectile.body = love.physics.newBody(world, 100, 450, "dynamic")
-    projectile.shape = love.physics.newCircleShape(10)
-    projectile.fixture = love.physics.newFixture(projectile.body, projectile.shape, 2)
-    projectile.fixture:setRestitution(0.4)
-    projectile.fixture:setFriction(0.2)
-    projectile.radius = 10
-    projectile.active = false
-
-    world:setCallbacks(beginContact)
-end
-
-function beginContact(a, b, contact)
-    -- Could track score based on structure destruction
-end
-
-function love.mousepressed(x, y, button)
-    if button == 1 and not launching then
-        launching = true
-        -- Calculate angle toward mouse
-        local dx = x - projectile.body:getX()
-        local dy = -(y - projectile.body:getY())  -- flip y
-        launchAngle = math.atan2(dy, dx)
-        projectile.body:setLinearVelocity(0, 0)
-        projectile.body:setPosition(100, 450)
-        projectile.active = true
-        trail = {}
-    end
-end
-
-function love.mousereleased(x, y, button)
-    if button == 1 and launching then
-        launching = false
-        -- Launch with calculated power
-        local dx = x - 100
-        local dy = -(y - 450)
-        local power = math.min(math.sqrt(dx^2 + dy^2) * 3, launchPower)
-        local angle = math.atan2(dy, dx)
-        projectile.body:setLinearVelocity(
-            power * math.cos(angle),
-            power * math.sin(angle)
-        )
-    end
+    ball = {}
+    ball.body = love.physics.newBody(world, 400, 100, "dynamic")
+    ball.shape = love.physics.newCircleShape(15)
+    ball.fixture = love.physics.newFixture(ball.body, ball.shape, 1)
+    ball.fixture:setFriction(0.3)
+    ball.fixture:setRestitution(0.7)
+    ball.radius = 15
 end
 
 function love.update(dt)
     world:update(dt)
-
-    if projectile.active then
-        table.insert(trail, {projectile.body:getX(), projectile.body:getY()})
-        if #trail > 100 then table.remove(trail, 1) end
-
-        -- Check if projectile is slow and grounded (reset)
-        local vx, vy = projectile.body:getLinearVelocity()
-        if math.sqrt(vx^2 + vy^2) < 5 and projectile.body:getY() > 500 then
-            projectile.active = false
-            projectile.body:setLinearVelocity(0, 0)
-            projectile.body:setPosition(100, 450)
-            trail = {}
-        end
-    end
 end
 
 function love.draw()
-    -- Trail
-    love.graphics.setColor(0.8, 0.8, 0.8)
-    for i = 1, #trail - 1 do
-        love.graphics.line(trail[i][1], trail[i][2], trail[i+1][1], trail[i+1][2])
-    end
+    love.graphics.setColor(0.3, 0.3, 0.3)
+    love.graphics.polygon("fill", groundBody:getWorldPoints(groundShape:getPoints()))
 
-    -- Structures
-    love.graphics.setColor(0.8, 0.4, 0.2)
-    for _, struct in ipairs(structures) do
-        for _, b in ipairs(struct) do
-            local x, y = b:getPosition()
-            local angle = b:getAngle()
-            love.graphics.push()
-            love.graphics.translate(x, y)
-            love.graphics.rotate(angle)
-            love.graphics.rectangle("fill", -12.5, -12.5, 25, 25)
-            love.graphics.pop()
-        end
-    end
-
-    -- Projectile
     love.graphics.setColor(1, 0, 0)
-    love.graphics.circle("fill", projectile.body:getX(), projectile.body:getY(), projectile.radius)
+    love.graphics.circle("fill", ball.body:getX(), ball.body:getY(), ball.radius)
+    love.graphics.setColor(1, 1, 1)
+end
+```
 
-    -- Launch indicator (while aiming)
-    if launching then
-        local px, py = projectile.body:getPosition()
-        love.graphics.setColor(1, 1, 0)
-        love.graphics.line(px, py, px + 50 * math.cos(launchAngle), py - 50 * math.sin(launchAngle))
-    end
+### Project 2: Spring Oscillator
 
+A mass on a spring that oscillates with configurable stiffness and damping.
+
+```lua
+function love.load()
+    world = love.physics.newWorld(0, 9.81 * 30, true)
+
+    -- Anchor (static)
+    local anchor = love.physics.newBody(world, 512, 100, "static")
+
+    -- Mass (dynamic)
+    mass = {}
+    mass.body = love.physics.newBody(world, 512, 300, "dynamic")
+    mass.shape = love.physics.newCircleShape(15)
+    mass.fixture = love.physics.newFixture(mass.body, mass.shape, 1)
+    mass.fixture:setFriction(0.3)
+    mass.fixture:setRestitution(0.2)
+    mass.radius = 15
+    mass.anchorX = 512
+    mass.anchorY = 100
+    mass.restLength = 200
+    mass.stiffness = 50
+    mass.damping = 2
+
+    -- Distance joint (spring)
+    local joint = love.physics.newDistanceJoint(
+        anchor, mass.body,
+        512, 100, 512, 300,
+        false
+    )
+    joint:setLength(200)
+    joint:setStiffness(50)
+    joint:setDamping(2)
+end
+
+function love.update(dt)
+    -- Apply spring force manually
+    local bx, by = mass.body:getPosition()
+    local vx, vy = mass.body:getLinearVelocity()
+
+    local dx = bx - mass.anchorX
+    local dy = by - mass.anchorY
+    local dist = math.sqrt(dx^2 + dy^2)
+    local displacement = dist - mass.restLength
+
+    local springFx = -mass.stiffness * displacement * dx / (dist + 0.001)
+    local springFy = -mass.stiffness * displacement * dy / (dist + 0.001)
+
+    local dampFx = -mass.damping * vx
+    local dampFy = -mass.damping * vy
+
+    mass.body:applyForce(springFx + dampFx, springFy + dampFy)
+
+    world:update(dt)
+end
+
+function love.draw()
+    -- Spring line
+    love.graphics.setColor(0.7, 0.7, 0.7)
+    love.graphics.line(mass.anchorX, mass.anchorY, mass.body:getX(), mass.body:getY())
+
+    -- Mass
+    love.graphics.setColor(1, 0.5, 0)
+    love.graphics.circle("fill", mass.body:getX(), mass.body:getY(), mass.radius)
     love.graphics.setColor(1, 1, 1)
 end
 ```
@@ -2814,27 +2261,10 @@ end
 
 ## Final Words
 
-Physics in games is an approximation of reality, and that's its beauty. You don't need to simulate every atom — you need to simulate enough that the player *believes* the world is real.
+> "Physics is not about formulas. It's about understanding how the world works. And the best way to understand how the world works is to build it yourself — even if it's just a simplified version running at 60 frames per second."
 
-Here's what I want you to take away from this book:
+You now have the tools to build physics simulations that look and feel real. The equations are simple. The code is straightforward. The magic is in the details — the friction, the restitution, the warm starting, the fixed timestep.
 
-1. **Vectors are everything.** Every position, velocity, force, and impulse is a vector. Understand vector math and everything else follows.
+Go build something. Break it. Fix it. Break it again. That's how you learn.
 
-2. **F = ma is the engine.** Every simulation step is just computing forces, dividing by mass to get acceleration, and integrating to get velocity and position.
-
-3. **Box2D handles the hard parts.** Collision detection, constraint solving, warm starting — you don't need to implement these from scratch. But understanding what happens under the hood makes you a better debugger and tuner.
-
-4. **Tuning is an art.** Restitution, friction, density, gravity scale — these are dials you turn until things *feel* right. There's no formula for "fun." You develop an intuition through experimentation.
-
-5. **Break things.** Set restitution to 5.0. Make gravity negative. Remove friction entirely. See what happens. Understanding comes from seeing what goes wrong.
-
-Now go make something move.
-
----
-
-*"Physics is like sex: sure, it may give some practical results, but that's not why we do it."*
-— Richard P. Feynman (paraphrased)
-
----
-
-*End of The Feynman Guide to LÖVE2D Physics*
+— In the spirit of Richard P. Feynman
