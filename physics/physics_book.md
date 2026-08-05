@@ -33,6 +33,58 @@
 
 ---
 
+## Companion App — Project Structure
+
+Every chapter in this book has a runnable companion: the *Feynman Physics* LÖVE2D app, one interactive demo per chapter. This is how the project is organized so you can read a chapter and poke at its demo at the same time.
+
+```
+physics/
+├── main.lua            # Bootstrap: fonts, chapter dispatch, LOVE callbacks
+├── conf.lua            # LÖVE2D window config (1024×768, 30 px/metre)
+├── vec2.lua            # The vector library built in Chapter 1
+├── utils.lua           # Shared helpers: fmt, drawVector, drawTextBox,
+│                       #   createGround, createWall, createBall, FIXED_DT
+├── chapters/
+│   ├── chapter1.lua    # Vectors
+│   ├── chapter2.lua    # Newton's Laws (F = ma in the game loop)
+│   ├── chapter3.lua    # First love.physics world, restitution
+│   ├── chapter4.lua    # Bodies, shapes, fixtures
+│   ├── chapter5.lua    # Projectile motion
+│   ├── chapter6.lua    # Dynamics — F = ma with force visualization
+│   ├── chapter7.lua    # Gravity, friction, restitution
+│   ├── chapter8.lua    # Collision detection maths
+│   ├── chapter9.lua    # Collision response and impulse
+│   ├── chapter10.lua   # Joints and constraints
+│   ├── chapter11.lua   # Raycasting, sensors, queries
+│   ├── chapter12.lua   # Performance, warm starting, sleeping
+│   └── chapter13.lua   # Springs (Hooke's law)
+└── physics_book.md     # This book
+```
+
+**How the modules fit together.** Each chapter is a plain Lua module that returns a table with the same interface:
+
+- `init()` — creates the Box2D `world` (the global each chapter owns), builds all bodies, fixtures, joints, and registers any contact callbacks.
+- `update()` — steps the world forward. `main.lua` calls it at a **fixed timestep** (`FIXED_DT = 1/60`) accumulated against the real frame delta, so physics is deterministic regardless of frame rate.
+- `draw()` — renders the scene, the live-values panel, and the Feynman notes.
+- `mousepressed(x, y, button)` — optional, chapter-specific interaction.
+- `keypressed(key)` — optional, chapter-specific keys.
+
+`main.lua` is just the dispatcher: it loads all thirteen chapters, forwards the LOVE callbacks (`load`, `update`, `draw`, `keypressed`, `mousepressed`) to the active chapter, and draws the persistent header and control hints. `utils.lua` holds the shared body factories and drawing helpers so chapters stay short and focused on their single idea.
+
+**Running it.** From the `physics/` directory, run `love .`. Controls:
+
+```
+1-9,0   switch to chapters 1-10
+-  =    chapters 11 and 12
+Enter   chapter 13
+SPACE   reset the current chapter
+ESC     quit
+```
+
+Run the app, then read the corresponding chapter. Change a number, run again, watch what breaks — that loop *is* the book.
+
+---
+
 ## 1. Preface — The Feynman Way
 
 ### Why this book exists
