@@ -142,6 +142,7 @@ function M.draw()
     love.graphics.setColor(0.7, 0.9, 0.7)
     love.graphics.print("Feynman: Impulse = change in momentum. J = Δp = mΔv. A heavy ball hitting a light one", px, py + 150)
     love.graphics.print("transfers most of its momentum. The light ball flies off at nearly twice the heavy ball's speed.", px, py + 164)
+    love.graphics.print("Two-body elastic collision velocities: v₁' = (m₁-m₂)/(m₁+m₂)·v₁, v₂' = 2m₁/(m₁+m₂)·v₁.", px, py + 178)
 end
 
 return M

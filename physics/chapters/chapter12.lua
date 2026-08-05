@@ -114,7 +114,8 @@ function M.draw()
     love.graphics.setColor(0.7, 0.9, 0.7)
     love.graphics.print("Feynman: Warm starting reuses last frame's impulses as initial guess for the solver.", px, py + 155)
     love.graphics.print("Sleeping bodies skip simulation entirely — huge performance win for static scenes.", px, py + 169)
-    love.graphics.print("Use fixed timestep (1/60s) for deterministic, stable physics.", px, py + 183)
+    love.graphics.print("Use fixed timestep (1/60s) + accumulator for deterministic, stable physics.", px, py + 183)
+    love.graphics.print("This prevents tunneling and jitter at variable frame rates (see Gaffer on Games, App.E).", px, py + 197)
 end
 
 return M

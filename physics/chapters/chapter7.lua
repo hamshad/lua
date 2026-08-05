@@ -121,8 +121,8 @@ function M.draw()
     -- Feynman explanation
     love.graphics.setColor(0.7, 0.9, 0.7)
     love.graphics.print("Feynman: Restitution e determines bounce height. After one bounce, the ball returns to e² of", px, py + 150)
-    love.graphics.print("its drop height. e=0.9 → 81% bounce. e=0.1 → 1% bounce. Friction μ determines how much", px, py + 164)
-    love.graphics.print("horizontal velocity is lost on impact. Ice (μ=0.1) = slippery. Rubber (μ=0.8) = grippy.", px, py + 178)
+    love.graphics.print("its drop height (h' = e²·h); after n bounces hₙ = e²ⁿ·h. So e=0.9 → 81%, e=0.5 → 25%.", px, py + 164)
+    love.graphics.print("Friction μ caps tangential force: F_f ≤ μ·F_normal (Coulomb). Ice μ≈0.1, rubber μ≈0.8.", px, py + 178)
 end
 
 return M

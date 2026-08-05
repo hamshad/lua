@@ -160,8 +160,9 @@ function M.draw()
     -- Feynman
     love.graphics.setColor(0.7, 0.9, 0.7)
     love.graphics.print("Feynman: Hooke's Law F = -kx is a linear approximation. Real springs deviate at large displacements.", px, py + 155)
-    love.graphics.print("Damping (-cv) simulates energy loss (friction, air resistance). Together they create oscillation", px, py + 169)
-    love.graphics.print("that gradually dies out — the system seeks equilibrium (minimum potential energy).", px, py + 183)
+    love.graphics.print("Damping (-cv) simulates energy loss (friction, air resistance). Angular frequency ω = √(k/m),", px, py + 169)
+    love.graphics.print("undamped period T = 2π√(m/k). Damping ratio ζ = c/(2√(km)); ζ<1 underdamped, ζ=1 critical", px, py + 183)
+    love.graphics.print("(fastest return, no overshoot), ζ>1 overdamped (slow). Full math: Appendix D.11, D.12.", px, py + 197)
 end
 
 function M.mousepressed(x, y, button)

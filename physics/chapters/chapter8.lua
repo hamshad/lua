@@ -136,8 +136,8 @@ function M.draw()
     -- Feynman
     love.graphics.setColor(0.7, 0.9, 0.7)
     love.graphics.print("Feynman: Box2D uses a two-phase approach. Broad-phase (AABB tree) quickly eliminates", px, py + 150)
-    love.graphics.print("non-overlapping pairs. Narrow-phase uses SAT for polygons, distance formula for circles.", px, py + 164)
-    love.graphics.print("CCD (Continuous Collision Detection) prevents tunneling at high speeds.", px, py + 178)
+    love.graphics.print("non-overlapping pairs. Narrow-phase uses SAT for convex polygons, distance for circles,", px, py + 164)
+    love.graphics.print("and CCD (Continuous Collision Detection) to stop tunneling at high speeds (Appendix E, Ch.8).", px, py + 178)
 end
 
 function M.mousepressed(x, y, button)

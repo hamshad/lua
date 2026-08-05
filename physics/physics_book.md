@@ -30,6 +30,9 @@
 15. [Appendix A — Formulae Quick Reference](#15-appendix-a)
 16. [Appendix B — LÖVE2D love.physics API Reference](#16-appendix-b)
 17. [Appendix C — Complete Example Projects](#17-appendix-c)
+18. [Appendix D — Derivations from First Principles](#18-appendix-d)
+19. [Appendix E — Further Reading (vetted links per chapter)](#19-appendix-e)
+20. [Appendix F — Terminology Glossary](#20-appendix-f)
 
 ---
 
@@ -2308,6 +2311,265 @@ function love.draw()
     love.graphics.setColor(1, 1, 1)
 end
 ```
+
+---
+
+## Appendix D — Derivations from First Principles
+
+> "Everything is derived. Nothing is taken on faith." — the Feynman rule.
+
+This appendix builds each key formula from scratch. If you can re-derive a formula, you understand it; if you can only look it up, you don't yet.
+
+### D.1 The dot product: `a·b = ax*bx + ay*by = |a||b|cos(θ)`
+
+Start from the geometric definition and derive the coordinate form.
+
+1. **Law of cosines** on the triangle formed by `a`, `b`, and `a - b`:
+   `|a - b|² = |a|² + |b|² - 2|a||b|cos(θ)`
+
+2. Expand the left side in coordinates:
+   `(ax-bx)² + (ay-by)² = ax² + bx² - 2·ax·bx + ay² + by² - 2·ay·by`
+   `= (ax² + ay²) + (bx² + by²) - 2(ax·bx + ay·by)`
+   `= |a|² + |b|² - 2(ax·bx + ay·by)`
+
+3. Equate the two forms, cancel `|a|² + |b|²`:
+   `-2(ax·bx + ay·by) = -2|a||b|cos(θ)`
+
+4. Divide by -2:
+   **`ax·bx + ay·by = |a||b|cos(θ)`**
+
+So the coordinate formula and the geometric formula are the *same number*. The dot product measures how much one vector points along another (a projection, scaled by the other's length).
+
+### D.2 The 2D cross product: `a×b = ax*by - ay*bx = |a||b|sin(θ)`
+
+The 2D cross product is the signed area of the parallelogram spanned by `a` and `b` — the determinant of the matrix with `a` and `b` as columns.
+
+`det = ax*by - ay*bx`
+
+That determinant equals the parallelogram area: base `|a|` times height `|b|sin(θ)`:
+**`ax*by - ay*bx = |a||b|sin(θ)`**
+
+Sign tells orientation: positive = `b` is counter-clockwise from `a`. This is what Separating Axis Theorem uses to test which side of an edge a vertex sits on.
+
+### D.3 Newton's second law and the game loop: `v' = v + a·dt`
+
+Start from the *definition* of force as rate of change of momentum, `F = dp/dt`. For constant mass, `p = mv`, so:
+
+`F = m·dv/dt  ⟹  dv/dt = F/m = a`
+
+Integrate velocity over one small step, assuming `a` is constant during the step:
+
+`Δv = a·dt ⟹ v' = v + a·dt`
+
+This is the *forward Euler* update. The game loop replaces integration with **discrete summation**:
+- `v' = v + a·dt`
+- `x' = x + v'·dt`  (note: uses the *new* velocity — semi-implicit Euler)
+
+Using the new velocity makes the scheme *symplectic*: it preserves energy for oscillatory systems (see D.4). Standard forward Euler uses the old velocity and slowly gains energy — springs explode.
+
+### D.4 Why semi-implicit Euler conserves energy
+
+For a harmonic oscillator, each step of forward Euler performs a shear that *increases* the orbit radius slightly — energy grows. Semi-implicit Euler performs two shears that are *exactly inverse*, so the orbit stays bounded forever (up to floating point). That's why every serious game engine steps velocity before position. It's not a cosmetic choice; it's the difference between a spring that rings forever and one that blows up.
+
+### D.5 Free fall: impact speed from drop height
+
+Energy conservation: potential energy at the top converts fully to kinetic energy at the bottom.
+
+`PE = m·g·h`,  `KE = ½·m·v²`
+`m·g·h = ½·m·v² ⟹ v² = 2·g·h ⟹` **`v = sqrt(2gh)`**
+
+Drop 600px at g=294.3: `v = sqrt(2·294.3·600) ≈ 594 px/s`. This matches what Chapter 3's ball actually reaches.
+
+### D.6 Restitution and bounce height
+
+Coefficient of restitution: `e = |v_after| / |v_before|` (speed after vs before a bounce).
+
+Bounce up at speed `e·v`, then rise until KE again becomes PE:
+`½·m·(e·v)² = m·g·h' ⟹ h' = (e·v)²/(2g) = e²·v²/(2g) = e²·h`
+
+So **bounce height = e² · drop height**. e=0.7 ⟹ 0.49 = 49%. e=0.9 ⟹ 81%. This is why the red ball in Chapter 3 bounces to half its drop height.
+
+### D.7 Projectile range: `R = v₀²·sin(2θ)/g`
+
+Split motion into horizontal (no acceleration) and vertical (gravity).
+
+Time to apex: `0 = v₀·sin(θ) - g·t_apex ⟹ t_apex = v₀·sin(θ)/g`
+Full flight: `t = 2·t_apex = 2·v₀·sin(θ)/g`
+
+Horizontal displacement during flight (constant vx = v₀·cos(θ)):
+`R = v₀·cos(θ) · 2·v₀·sin(θ)/g = v₀²·(2·sin(θ)cos(θ))/g`
+
+Use the identity `sin(2θ) = 2·sin(θ)cos(θ)`:
+**`R = v₀²·sin(2θ)/g`**
+
+Max range at θ=45° because sin(90°)=1. Note: this ignores launch height, air drag, and ground elevation — the demo in Chapter 5 launches from y=650 so reality falls short of the prediction; that discrepancy is instructive.
+
+### D.8 Impulse-momentum: `J = Δp = m·Δv`
+
+From Newton's law in integral form:
+`J = ∫F dt = Δp` (the impulse of a force equals the change in momentum).
+
+For a collision resolved over a tiny time, the impulse is `J = m(v' - v)`. Solving the pair of collision equations with restitution `e` gives the classic result:
+
+**`j = -(1+e) · (v_rel · n) / (1/m₁ + 1/m₂)`**
+
+where `v_rel · n` is the approach speed along the contact normal. Derivation sketch:
+1. Relative velocity along normal after impact = `-e` times before: `v_rel' · n = -e·(v_rel · n)`.
+2. Each body's velocity change is its impulse divided by its mass: `v₁' = v₁ + j·n/m₁`, `v₂' = v₂ - j·n/m₂`.
+3. Substitute into step 1 and solve for the single unknown `j`. The term `1/(1/m₁ + 1/m₂)` is the **reduced mass** `μ` (D.9) — the effective mass of the pair.
+
+With e=1, heavy 5kg at 150 hits light 1kg at 0: `j = -2·150/(0.2+1) = -250`, giving heavy 100 and light 250. Check with D.10.
+
+### D.9 Reduced mass: `μ = m₁·m₂/(m₁ + m₂)`
+
+When two bodies interact, neither responds as if it had its own mass alone — each is dragged by the other. The pair's "effective mass" along the contact normal is the harmonic sum:
+
+`1/μ = 1/m₁ + 1/m₂ ⟹ μ = m₁·m₂/(m₁ + m₂)`
+
+Think: equal masses give `μ = m/2` (both move, neither is "anchored"); one body much heavier gives `μ ≈ m_light` (the heavy one is nearly an immovable wall). The impulse formula `j = -(1+e)·v_rel·μ` is the compact form.
+
+### D.10 Elastic collision velocities
+
+For e=1, conservation of momentum `m₁v₁ + m₂v₂ = m₁v₁' + m₂v₂'` and conservation of kinetic energy give:
+
+`v₁' = (m₁ - m₂)/(m₁ + m₂) · v₁ + (2m₂)/(m₁ + m₂) · v₂`
+`v₂' = (2m₁)/(m₁ + m₂) · v₁ + (m₂ - m₁)/(m₁ + m₂) · v₂`
+
+With m₁=5, m₂=1, v₁=150, v₂=0:
+`v₁' = (4/6)·150 = 100`, `v₂' = (10/6)·150 = 250`. The light ball leaves at 2.5× the heavy ball's speed — exactly what Chapter 9 shows.
+
+### D.11 Pendulum period: `T = 2π√(L/g)`
+
+For small angles, the restoring force is approximately linear: `F = -m·g·sin(θ) ≈ -m·g·θ`. This makes the pendulum a harmonic oscillator with angular frequency `ω = sqrt(g/L)` (derive: torque τ = -m·g·L·θ = I·d²θ/dt² with I = mL², giving d²θ/dt² + (g/L)θ = 0).
+
+Period: `T = 2π/ω =` **`2π√(L/g)`**
+
+With L=6.67m (200px ÷ 30px/m), g=9.81: `T = 2π√(6.67/9.81) ≈ 5.18s`. The approximation is accurate to ~1% below 15° and degrades as the swing grows — another place where the demo's live value and reality diverge on purpose.
+
+### D.12 Spring motion (Hooke's law + damping)
+
+Hooke: `F = -k·x`. Newton: `m·d²x/dt² = -k·x`. This is `d²x/dt² + (k/m)·x = 0`, the harmonic oscillator with `ω₀ = sqrt(k/m)`.
+
+With damping `F = -c·v`:
+`m·d²x/dt² + c·dx/dt + k·x = 0`
+Solution depends on the damping ratio `ζ = c/(2·sqrt(km))`:
+- `ζ < 1` (underdamped): oscillates with decaying amplitude — the Chapter 13 demo.
+- `ζ = 1` (critical): fastest return without overshoot.
+- `ζ > 1` (overdamped): slow asymptotic return, no oscillation.
+
+The energy story: total mechanical energy `E = ½kx² + ½mv²` is constant for undamped motion, and decays at rate `-c·v²` (work done against damping) otherwise.
+
+---
+
+## Appendix E — Further Reading (vetted links per chapter)
+
+Every link below was checked and resolves. Read the chapter, play the demo, then follow the link for the deeper story.
+
+### Chapter 1 — Vectors
+- 3Blue1Brown, *Dot products and duality* — the dot product as projection, beautifully animated. <https://www.youtube.com/watch?v=LyGKycYT2v0>
+- 3Blue1Brown, *Cross products* — why the cross product is a signed area. <https://www.youtube.com/watch?v=eu6i7WJeinw>
+- Wikipedia, *Vector (mathematics and physics)* — rigorous definitions. <https://en.wikipedia.org/wiki/Vector_(mathematics_and_physics)>
+
+### Chapter 2 — Newton's Laws, the game loop, integration
+- Glenn Fiedler (Gaffer on Games), *Fix Your Timestep!* — the definitive essay on fixed-timestep game loops. This is the loop `main.lua` implements. <https://gafferongames.com/post/fix_your_timestep/>
+- Wikipedia, *Symplectic integrator* — why semi-implicit Euler conserves energy. <https://en.wikipedia.org/wiki/Symplectic_integrator>
+- Wikipedia, *Newton's laws of motion*. <https://en.wikipedia.org/wiki/Newton%27s_laws_of_motion>
+- Wikipedia, *Numerical integration* — the family Euler belongs to. <https://en.wikipedia.org/wiki/Numerical_integration>
+
+### Chapter 3 — Box2D and LÖVE
+- LÖVE wiki, *love.physics* — the official LÖVE physics module reference. <https://love2d.org/wiki/love.physics>
+- Box2D, *official documentation/manual* — the C++ engine LÖVE wraps (v2.3.0). <https://box2d.org/documentation/>
+- Wikipedia, *Coefficient of restitution*. <https://en.wikipedia.org/wiki/Coefficient_of_restitution>
+
+### Chapter 4 — Bodies, shapes, fixtures
+- Box2D documentation — the *Collision shapes* section covers circles, polygons, and why vertices must be convex (≤ 8 in Box2D). <https://box2d.org/documentation/>
+- Wikipedia, *Convex polygon* — why convexity keeps the Separating Axis Theorem simple. <https://en.wikipedia.org/wiki/Convex_polygon>
+- Wikipedia, *Moment of inertia* — the rotational sibling of mass. <https://en.wikipedia.org/wiki/Moment_of_inertia>
+
+### Chapter 5 — Projectile motion
+- Wikipedia, *Projectile motion* — full derivation of range, height, and flight time. <https://en.wikipedia.org/wiki/Projectile_motion>
+
+### Chapter 6 — Dynamics and forces
+- Wikipedia, *Newton's laws of motion*. <https://en.wikipedia.org/wiki/Newton%27s_laws_of_motion>
+- Wikipedia, *Rigid body dynamics* — the general framework Box2D solves. <https://en.wikipedia.org/wiki/Rigid_body_dynamics>
+
+### Chapter 7 — Friction and restitution
+- Wikipedia, *Friction* (Coulomb model). <https://en.wikipedia.org/wiki/Friction>
+- Wikipedia, *Coefficient of restitution*. <https://en.wikipedia.org/wiki/Coefficient_of_restitution>
+
+### Chapter 8 — Collision detection
+- Wikipedia, *Collision detection* — broad-phase vs narrow-phase, SAT, GJK, CCD. <https://en.wikipedia.org/wiki/Collision_detection>
+- Wikipedia, *Separating axis theorem* — the narrow-phase algorithm Box2D uses for polygons. <https://en.wikipedia.org/wiki/Separating_axis_theorem>
+- Wikipedia, *Bounding volume hierarchy* / *AABB* — the broad-phase tree. <https://en.wikipedia.org/wiki/Bounding_volume_hierarchy>
+
+### Chapter 9 — Collision response and impulse
+- Wikipedia, *Impulse (physics)*. <https://en.wikipedia.org/wiki/Impulse_(physics)>
+- Wikipedia, *Elastic collision* — derives the two-body velocity formulas. <https://en.wikipedia.org/wiki/Elastic_collision>
+- Wikipedia, *Reduced mass* — the effective mass of a colliding pair. <https://en.wikipedia.org/wiki/Reduced_mass>
+- Wikipedia, *Collision response*. <https://en.wikipedia.org/wiki/Collision_response>
+
+### Chapter 10 — Joints and constraints
+- Box2D documentation — the *Joints* section: revolute, distance, prismatic, and how the constraint solver works. <https://box2d.org/documentation/>
+- Wikipedia, *Pendulum (mechanics)* — the exact (non-linearized) solution. <https://en.wikipedia.org/wiki/Pendulum_(mechanics)>
+
+### Chapter 11 — Raycasting and sensors
+- LÖVE wiki, *World:rayCast* — signature and callback semantics. <https://love2d.org/wiki/World:rayCast>
+
+### Chapter 12 — Performance
+- Glenn Fiedler, *Fix Your Timestep!* — determinism and stability. <https://gafferongames.com/post/fix_your_timestep/>
+- Wikipedia, *Verlet integration* — an alternative to Euler used by many engines. <https://en.wikipedia.org/wiki/Verlet_integration>
+
+### Chapter 13 — Springs
+- Wikipedia, *Hooke's law*. <https://en.wikipedia.org/wiki/Hooke%27s_law>
+- Wikipedia, *Simple harmonic motion* — the undamped oscillator and its period. <https://en.wikipedia.org/wiki/Simple_harmonic_motion>
+
+---
+
+## Appendix F — Terminology Glossary
+
+**AABB** (axis-aligned bounding box) — the smallest rectangle, unrotated, that encloses a body. Box2D's broad-phase uses AABBs in a tree to skip pairs that obviously can't collide.
+
+**Broad-phase / narrow-phase** — two-stage collision detection. Broad-phase cheaply eliminates non-overlapping pairs (AABB tree). Narrow-phase precisely tests the survivors (SAT for polygons, distance for circles).
+
+**Bullet / CCD** (continuous collision detection) — marks a fast body so Box2D sweeps its path, preventing "tunneling" through thin walls between steps. `body:setBullet(true)`.
+
+**Coefficient of restitution (e)** — ratio of separation speed to approach speed in a collision, 0 ≤ e ≤ 1. e=1 elastic (KE conserved), e=0 perfectly inelastic (bodies stick). Bounce height scales as e².
+
+**Constraint** — a rule that limits relative motion between bodies (a joint is a constraint). Box2D's solver enforces all constraints each step by iteration.
+
+**Damping** — a force opposing velocity, `F = -c·v`. In joints it models friction/air resistance; without it springs oscillate forever.
+
+**Density** — mass per unit area (kg/m²). Box2D computes `mass = density × shape_area`.
+
+**Dynamic body** — fully simulated: affected by forces, gravity, and collisions.
+
+**Fixture** — attaches a shape to a body and holds material properties (density, friction, restitution, sensor flag, user data).
+
+**Fixed timestep** — physics steps at a constant rate (1/60 s) independent of frame rate. Accumulate real delta time, step physics a fixed number of times. Gives determinism and stability.
+
+**Friction coefficient (μ)** — proportionality in Coulomb's model: `F_friction ≤ μ·F_normal`. μ=0 ice, μ=1 rough. Independent of contact area.
+
+**Impulse** — `J = ∫F dt = Δp`. A force applied over a tiny time; the instantaneous way to change momentum (bounces, kicks).
+
+**Kinematic body** — moved by code (velocity set explicitly), ignores forces, but can collide. Used for moving platforms.
+
+**Normal force** — the contact force a surface exerts perpendicular to itself; it balances gravity for a body at rest on the ground.
+
+**Reduced mass (μ)** — `μ = m₁m₂/(m₁+m₂)`. The effective mass of a two-body system along their contact normal; governs how they respond to each other.
+
+**Restitution** — see *Coefficient of restitution*.
+
+**SAT** (separating axis theorem) — narrow-phase test: two convex polygons don't overlap iff a line can separate them; check projections on the normals of all edges.
+
+**Semi-implicit / symplectic Euler** — integration that updates velocity first, then position with the *new* velocity. Preserves energy for oscillatory systems; the standard for game physics.
+
+**Sensor** — a fixture with `setSensor(true)` that reports overlaps (via contact callbacks) but produces no physical response. Trigger zones.
+
+**Sleeping** — a dynamic body at rest is excluded from the solver until woken by a collision. Big performance win for static scenes.
+
+**Static body** — infinite mass, never moves, never affected by forces. Floors and walls.
+
+**Warm starting** — the solver stores last frame's impulses and reuses them as the initial guess, converging in far fewer iterations.
 
 ---
 

@@ -163,6 +163,7 @@ function M.draw()
     love.graphics.setColor(0.7, 0.9, 0.7)
     love.graphics.print("Feynman: Projectile motion is the superposition of two independent motions:", px, py + 155)
     love.graphics.print("horizontal (constant velocity) and vertical (constant acceleration). The path is a parabola.", px, py + 169)
+    love.graphics.print("Range R = v₀²·sin(2θ)/g peaks at 45° (full derivation: Appendix D.7).", px, py + 183)
 end
 
 function M.mousepressed(x, y, button)

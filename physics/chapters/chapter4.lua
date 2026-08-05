@@ -146,8 +146,8 @@ function M.draw()
     -- Feynman explanation
     love.graphics.setColor(0.7, 0.9, 0.7)
     love.graphics.print("Feynman: A circle and a hexagon of the same area have the same mass if density is equal.", px, py + 150)
-    love.graphics.print("But their collision behavior differs — circles roll, polygons can interlock.", px, py + 164)
-    love.graphics.print("Friction coefficient μ: F_friction ≤ μ * F_normal. This is Coulomb's model.", px, py + 178)
+    love.graphics.print("But their collision behavior differs — circles roll, polygons can interlock. Mass is the", px, py + 164)
+    love.graphics.print("inertia against linear motion; moment of inertia resists rotation (see Appendix E, Ch.4).", px, py + 178)
 end
 
 function M.mousepressed(x, y, button)

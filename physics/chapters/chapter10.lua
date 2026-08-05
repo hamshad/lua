@@ -148,6 +148,7 @@ function M.draw()
     love.graphics.print("Feynman: Joints are constraints. A distance joint enforces a fixed length between two points.", px, py + 100)
     love.graphics.print("A revolute joint allows rotation around a point (like a hinge). Chains of distance joints", px, py + 114)
     love.graphics.print("simulate ropes, chains, and soft bodies. The solver iterates to satisfy all constraints.", px, py + 128)
+    love.graphics.print("A pendulum's period T = 2π√(L/g) is independent of mass and amplitude (Appendix D.10).", px, py + 142)
 
     -- Controls
     love.graphics.setColor(0.5, 0.5, 0.5)

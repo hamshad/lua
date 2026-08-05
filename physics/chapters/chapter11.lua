@@ -176,6 +176,8 @@ function M.draw()
     love.graphics.setColor(0.7, 0.9, 0.7)
     love.graphics.print("Feynman: Raycasting casts an invisible line and reports what it hits. Sensors detect overlap", px, py + 100)
     love.graphics.print("without physical response — perfect for trigger zones, proximity detection, and line of sight.", px, py + 114)
+    love.graphics.print("Box2D raycasts return the fixture, intersection point, surface normal, and a 0-1 fraction", px, py + 128)
+    love.graphics.print("along the ray (LÖVE docs: World:rayCast). R = start→mouse, held to sweep.", px, py + 142)
 end
 
 function M.mousepressed(x, y, button)

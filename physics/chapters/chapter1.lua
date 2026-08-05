@@ -122,7 +122,8 @@ function M.draw()
     love.graphics.setFont(fontSmall)
     love.graphics.setColor(0.7, 0.9, 0.7)
     love.graphics.print("Feynman: Vectors are the language of physics. Position, velocity, force — all vectors.", px, py + 150)
-    love.graphics.print("The dot product tells you 'how much' one vector points in another's direction.", px, py + 164)
+    love.graphics.print("The dot product is a projection: a·b = |a||b|cos(θ). The cross product is a signed area:", px, py + 164)
+    love.graphics.print("a×b = |a||b|sin(θ) — its sign tells you the turn direction (see Appendix D.1, D.2).", px, py + 178)
 end
 
 function M.mousepressed(x, y, button)

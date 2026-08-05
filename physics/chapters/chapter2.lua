@@ -228,8 +228,8 @@ function M.draw()
     -- Feynman explanation
     love.graphics.setColor(0.7, 0.9, 0.7)
     love.graphics.print("Feynman: F = ma is the engine of all physics. Every frame, we sum forces, divide by mass,", px, py + 150)
-    love.graphics.print("integrate to get velocity, integrate again to get position. Semi-implicit Euler preserves", px, py + 164)
-    love.graphics.print("energy for oscillatory systems — that's why it's called symplectic.", px, py + 178)
+    love.graphics.print("integrate to get velocity, integrate again to get position. Semi-implicit (symplectic) Euler", px, py + 164)
+    love.graphics.print("updates velocity BEFORE position, preserving energy for oscillations (see Appendix D.3, D.4).", px, py + 178)
 
     -- Controls hint
     love.graphics.setColor(0.5, 0.5, 0.5)

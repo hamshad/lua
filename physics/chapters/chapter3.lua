@@ -121,8 +121,8 @@ function M.draw()
     -- Feynman explanation
     love.graphics.setColor(0.7, 0.9, 0.7)
     love.graphics.print("Feynman: All collisions conserve momentum. With restitution e=1, kinetic energy is also", px, py + 150)
-    love.graphics.print("conserved (elastic). With e=0, objects stick together (perfectly inelastic). With e=0.7,", px, py + 164)
-    love.graphics.print("the ball bounces back to 49% of its drop height (0.7² = 0.49).", px, py + 178)
+    love.graphics.print("conserved (elastic). With e=0, objects stick together (perfectly inelastic). Bounce height", px, py + 164)
+    love.graphics.print("scales as e²: e=0.7 bounces to 49%, e=0.9 to 81% (derive: h' = e²·h, Appendix D.6).", px, py + 178)
 end
 
 function M.mousepressed(x, y, button)

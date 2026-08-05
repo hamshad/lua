@@ -135,6 +135,7 @@ function M.draw()
     love.graphics.print("Feynman: F = ma. Force causes acceleration. Acceleration changes velocity. Velocity changes", pxx, pyy + 130)
     love.graphics.print("position. That's the entire chain of Newtonian mechanics. Every game physics engine does this.", pxx, pyy + 144)
     love.graphics.print("The net force is the vector sum of ALL forces: gravity + applied + normal + friction.", pxx, pyy + 158)
+    love.graphics.print("The normal force is a reaction — it only exists while surfaces are in contact.", pxx, pyy + 172)
 
     -- Controls
     love.graphics.setColor(0.5, 0.5, 0.5)
