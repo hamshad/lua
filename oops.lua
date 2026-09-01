@@ -20,11 +20,10 @@ setmetatable(vec3, {
 vec3old = vec3 + vec3
 
 
--- OOPS (actually just tables and metatables)
-
-EarphoneType = {
-  InEar = 0,
-  OverEar = 1
+-- Enums (kinda)
+SpeakerIDS = {
+  "Soundcore153",
+  "nothing526"
 }
 
 BassBoosted = {
@@ -37,17 +36,23 @@ Wireless = {
   OFF = 1
 }
 
-Earphones = {
-  model = "",
+EarphoneType = {
+  InEar = 0,
+  OverEar = 1
+}
+
+
+-- OOPS (actually just tables and metatables)
+Speaker = {
+  speakerID = "",
   isWireless = Wireless.ON,
   isBassBoosted = BassBoosted.OFF,
-  type = EarphoneType.InEar,
   player = function(self, isStart, isStop)
     if isStart == true then
-      print("STARTING " .. self.model)
-      print("BassBoosted = " .. (self.isBassBoosted and "ON" or "OFF"))
+      print("STARTING " .. self.speakerID)
+      print("BassBoosted = " .. (self.isBassBoosted == BassBoosted.ON and "ON" or "OFF"))
     elseif isStop == true then
-      print("STOP " .. self.model)
+      print("STOP " .. self.speakerID)
     end
   end
 }
@@ -56,13 +61,14 @@ Earphones = {
 -- : means new(self, ..args..)
 -- difference inbet : and . is only the self insertion
 -- even at the time of calling use the respective declaring operator
-function Earphones:new(model, isWireless, isBassBoosted, type)
+function Speaker:new(model, isWireless, isBassBoosted)
+  -- #COMMENT1
   local obj = {}
 
-  setmetatable(obj, Earphones)
+  setmetatable(obj, Speaker)
 
   -- if not this, lua won't search for the methods/fields in Earphones in new object
-  Earphones.__index = Earphones
+  Speaker.__index = Speaker
 
   -- this passes same table to new objectes
   -- setmetatable({}, Earphones)
@@ -70,24 +76,44 @@ function Earphones:new(model, isWireless, isBassBoosted, type)
   obj.model = model
   obj.isWireless = isWireless
   obj.isBassBoosted = isBassBoosted
-  obj.type = type
 
   return obj
 end
 
-function Earphones:play()
+function Speaker:play()
   self:player(true, false)
-  print("Type = " .. (self.type == EarphoneType.InEar and "InEar" or "OverEar"))
 end
 
-soundcore = Earphones:new("Anker", Wireless.ON, BassBoosted.OFF, EarphoneType.OverEar)
-
+soundcore = Speaker:new(SpeakerIDS[1], Wireless.ON, BassBoosted.ON)
 soundcore:play()
 
 
-nothing = Earphones:new("2a", Wireless.ON, BassBoosted.OFF, EarphoneType.InEar)
-
+nothing = Speaker:new(SpeakerIDS[2], Wireless.ON, BassBoosted.OFF)
 nothing:play()
 
-print(soundcore == nothing)
-print(nothing == soundcore)
+print("ref #COMMENT1 (nothing == soundcore) is " .. (nothing == soundcore and "same" or "diff"))
+
+
+-- Inheritence
+Earphone = Speaker:new()
+
+function Earphone:new(speakerID, isWireless, isBassBoosted, earphoneType)
+  -- #COMMENT2
+  setmetatable({}, Earphone)
+
+  self.speakerID = speakerID
+  self.isWireless = isWireless
+  self.isBassBoosted = isBassBoosted
+  self.earphoneType = earphoneType
+
+  return self
+end
+
+soundcoreAnkerQ1 = Earphone:new(SpeakerIDS[1], Wireless.ON, BassBoosted.ON, EarphoneType.OverEar)
+soundcoreAnkerQ1:play()
+
+nothing2a = Earphone:new(SpeakerIDS[2], Wireless.ON, BassBoosted.ON, EarphoneType.InEar)
+nothing2a:play()
+
+
+print("ref #COMMENT2 (nothing == soundcore) is " .. (nothing2a == soundcoreAnkerQ1 and "same" or "diff"))
