@@ -14,6 +14,25 @@ local function shuffle(table)
   return table
 end
 
+-- Random (#Read the random.md doc for more)
+local function secureRandom(min, max)
+  -- this file handling stuff (idk how it works in lua)
+  local file = assert(io.open("/dev/urandom", rb))
+  local bytes = file:read(4)
+  file:close()
+
+  local n, pos = string.unpack("<I4", bytes)
+
+  -- range it
+  return min + (n % (max - min + 1))
+end
+
+-- print("=== SECURE RANDOM ===")
+-- print(secureRandom(1, 10))
+-- print("=====================")
+
+
+
 -- METATABLES
 print("-- Metatables")
 
@@ -163,11 +182,16 @@ Engine = {
 }
 
 function Engine:breaksdown()
-  local random = shuffle(rand)
+  -- here we were just selecting randomly from a shuffled list
+  -- local random = shuffle(rand)
   -- for k, v in ipairs(random) do
   --   print("KEY = " .. k .. " VALUE = " .. v)
   -- end
-  if random[math.random(1, #random)] == 3 and self.isRunning then
+  -- if random[math.random(1, #random)] == 3 and self.isRunning then
+
+  local rand = secureRandom(1, 10)
+  -- print(rand)
+  if rand == 3 and self.isRunning then
     print()
     print("The Engine broke down :(")
     self:stop()
