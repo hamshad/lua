@@ -1,3 +1,19 @@
+-- Fisher–Yates Shuffle
+math.randomseed(os.time())
+
+local rand = {}
+for i = 1, 10 do
+  rand[i] = i
+end
+
+local function shuffle(table)
+  for i = #table, 2, -1 do
+    local j = math.random(1, i)
+    table[i], table[j] = table[j], table[i]
+  end
+  return table
+end
+
 -- METATABLES
 print("-- Metatables")
 
@@ -134,14 +150,31 @@ print("-- Composition")
 
 Engine = {
   type = EngineType.none,
+  isRunning = false,
   start = function(self)
     print("Engine Started")
+    self.isRunning = true
     print("HorsePower = " .. self.type .. "CC")
   end,
   stop = function(self)
     print("Engine Stopped")
+    self.isRunning = false
   end
 }
+
+function Engine:breaksdown()
+  local random = shuffle(rand)
+  -- for k, v in ipairs(random) do
+  --   print("KEY = " .. k .. " VALUE = " .. v)
+  -- end
+  if random[math.random(1, #random)] == 3 and self.isRunning then
+    print()
+    print("The Engine broke down :(")
+    self:stop()
+    return true
+  end
+  return false
+end
 
 function Engine:new(type)
   local obj = {}
@@ -164,6 +197,9 @@ Car = {
   brake = function(self)
     self.engine:stop()
     print("Braking " .. self.name)
+  end,
+  healthcheck = function(self)
+    return self.engine:breaksdown()
   end
 }
 
@@ -186,6 +222,9 @@ for i = 0.2, 1, 0.1 do
   io.flush()
   os.execute("sleep " .. i)
   io.write(".")
+  if mercedes:healthcheck() then
+    break
+  end
 end
 print()
 
