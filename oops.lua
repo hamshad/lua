@@ -1,4 +1,5 @@
 -- METATABLES
+print("-- Metatables")
 
 vec3 = {
   { x = 0, y = 0, z = 0 },
@@ -20,7 +21,7 @@ setmetatable(vec3, {
 vec3old = vec3 + vec3
 
 
--- Enums (kinda)
+-- nums (kinda)
 SpeakerIDS = {
   "Soundcore153",
   "nothing526"
@@ -41,8 +42,17 @@ EarphoneType = {
   OverEar = 1
 }
 
+EngineType = {
+  none = 0,
+  V6 = 2500,
+  V8 = 4000,
+  V10 = 5200,
+  V12 = 6000
+}
+
 
 -- OOPS (actually just tables and metatables)
+print("-- OOPS")
 Speaker = {
   speakerID = "",
   isWireless = Wireless.ON,
@@ -95,6 +105,7 @@ print("ref #COMMENT1 (nothing == soundcore) is " .. (nothing == soundcore and "s
 
 
 -- Inheritence
+print("-- Inheritence")
 Earphone = Speaker:new()
 
 function Earphone:new(speakerID, isWireless, isBassBoosted, earphoneType)
@@ -117,3 +128,65 @@ nothing2a:play()
 
 
 print("ref #COMMENT2 (nothing == soundcore) is " .. (nothing2a == soundcoreAnkerQ1 and "same" or "diff"))
+
+-- Composition
+print("-- Composition")
+
+Engine = {
+  type = EngineType.none,
+  start = function(self)
+    print("Engine Started")
+    print("HorsePower = " .. self.type .. "CC")
+  end,
+  stop = function(self)
+    print("Engine Stopped")
+  end
+}
+
+function Engine:new(type)
+  local obj = {}
+  setmetatable(obj, Engine)
+
+  Engine.__index = Engine
+
+  obj.type = type
+
+  return obj
+end
+
+Car = {
+  name = "",
+  engine = Engine:new(EngineType.none), -- if Engine:new() then the param defaults to nil
+  accelerate = function(self)
+    self.engine:start()
+    print("Accelerating " .. self.name)
+  end,
+  brake = function(self)
+    self.engine:stop()
+    print("Braking " .. self.name)
+  end
+}
+
+function Car:new(name, engine)
+  local obj = {}
+  setmetatable(obj, Car)
+  Car.__index = Car
+
+  obj.name = name
+  obj.engine = engine
+
+  return obj
+end
+
+mercedes = Car:new("Mercedes", Engine:new(EngineType.V10))
+mercedes:accelerate()
+
+-- sleep 2 seconds
+for i = 0.2, 1, 0.1 do
+  io.flush()
+  os.execute("sleep " .. i)
+  io.write(".")
+end
+print()
+
+mercedes:brake()
