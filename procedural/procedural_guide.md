@@ -28,12 +28,17 @@
 13. [Chapter 12 — Game Feel: Anticipation, Hit-Stop, Shake](#13-chapter-12)
 14. [Chapter 13 — The Procedural Walker: Locomotion from Sine](#14-chapter-13)
 15. [Chapter 14 — Putting It All Together: A Living Character](#15-chapter-14)
-16. [Appendix A — Formulae Quick Reference](#16-appendix-a)
-17. [Appendix B — LÖVE2D API Reference](#17-appendix-b)
-18. [Appendix C — Complete Example Projects](#18-appendix-c)
-19. [Appendix D — Derivations from First Principles](#19-appendix-d)
-20. [Appendix E — Further Reading (vetted links per chapter)](#20-appendix-e)
-21. [Appendix F — Terminology Glossary](#21-appendix-f)
+16. [Chapter 15 — Velocity, Momentum, Kinetic Energy](#16-chapter-15)
+17. [Chapter 16 — Projectiles: Gravity Arcs and Aiming](#17-chapter-16)
+18. [Chapter 17 — Collisions and Impulse](#18-chapter-17)
+19. [Chapter 18 — Pendulums, Torque, and Orbits](#19-chapter-18)
+20. [Chapter 19 — Kinetic Ragdoll: Verlet Mesh and Shatter](#20-chapter-19)
+21. [Appendix A — Formulae Quick Reference](#21-appendix-a)
+17. [Appendix B — LÖVE2D API Reference](#22-appendix-b)
+18. [Appendix C — Complete Example Projects](#23-appendix-c)
+19. [Appendix D — Derivations from First Principles](#24-appendix-d)
+20. [Appendix E — Further Reading (vetted links per chapter)](#25-appendix-e)
+21. [Appendix F — Terminology Glossary](#26-appendix-f)
 
 ---
 
@@ -61,7 +66,12 @@ procedural/
 │   ├── chapter11.lua   # Secondary motion — springy tail
 │   ├── chapter12.lua   # Game feel — hit-stop, shake, anticipation
 │   ├── chapter13.lua   # The procedural walker — sine legs
-│   └── chapter14.lua   # Integration — a living character
+│   ├── chapter14.lua   # Integration — a living character
+│   ├── chapter15.lua   # Kinetics — velocity, momentum, KE
+│   ├── chapter16.lua   # Projectiles — gravity arcs, aim preview
+│   ├── chapter17.lua   # Collisions — impulse + restitution
+│   ├── chapter18.lua   # Pendulum torque + orbital gravity
+│   └── chapter19.lua   # Ragdoll — Verlet mesh, shockwave
 └── procedural_guide.md # This book
 ```
 
@@ -73,7 +83,7 @@ procedural/
 - `mousepressed(x, y, button)` — optional, chapter-specific interaction.
 - `keypressed(key)` — optional, chapter-specific keys.
 
-`main.lua` is just the dispatcher: it loads all fourteen chapters, forwards the LOVE callbacks, and draws the persistent header and control hints. `utils.lua` holds the handful of math primitives every chapter needs — `clamp`, `lerp`, `damp`, the easing curves, and drawing helpers — so chapters stay short and focused on their single idea.
+`main.lua` is just the dispatcher: it loads all nineteen chapters, forwards the LOVE callbacks, and draws the persistent header and control hints. `utils.lua` holds the handful of math primitives every chapter needs — `clamp`, `lerp`, `damp`, the easing curves, and drawing helpers — so chapters stay short and focused on their single idea.
 
 **Running it.** From the `procedural/` directory, run `love .`. Controls:
 
@@ -82,7 +92,9 @@ procedural/
 -  =    chapters 11 and 12
 Enter   chapter 13
 ]       chapter 14
-SPACE   reset the current chapter
+Q-T     chapters 15-19 (kinetics)
+SPACE   chapter action (fire, kick, punch)
+BKSP    reset the current chapter
 ESC     quit
 ```
 
@@ -1365,6 +1377,148 @@ The arm is Chapter 9's solve with a damp on the hand; the blink is Chapter 10's 
 
 ---
 
+## 16. Chapter 15 — Velocity, Momentum, Kinetic Energy
+
+### Kinetics: why things move
+
+Kinematics describes motion; **kinetics** explains it with mass and force. A puck's state is position plus velocity, and force changes the velocity through Newton's second law:
+
+```
+F = m·a        a = F/m        v += a·dt        x += v·dt
+p = m·v        KE = ½·m·|v|²
+```
+
+Same push, different mass: `F = 900·m` on `m = 1` gives `a = 900 px/s²`; on `m = 4` only `225 px/s²`. That division by mass is the entire demo — push light and heavy pucks with the arrows and feel inertia in your fingers.
+
+### Two derived quantities that run games
+
+- **Momentum p = m·v** — what a wall must absorb to stop the puck. The yellow arrow. Heavy-slow can carry more punch than light-fast.
+- **Kinetic energy KE = ½·m·v²** — what friction must burn. Friction decays velocity exponentially (`v *= exp(-μ·dt)`), so energy dies quadratically; fast pucks visibly "run out of hurry" first.
+
+### Dummy value walkthrough
+
+```
+Push F = 900·m for 0.5 s, μ = 0.6, from rest.
+m = 1:  a = 900, v ≈ 900·0.5·decay ≈ 330 px/s,  KE ≈ ½·1·330² ≈ 54,000
+m = 4:  a = 225, v ≈ 225·0.5·decay ≈ 83 px/s,   KE ≈ ½·4·83²  ≈ 13,800
+Same push, same time — the light puck carries ~4× the energy. Mass is reluctance.
+```
+
+### Exercise 15
+
+Add a "bowling" mode: press `B` to line all pucks up and fling the lightest at the heavies. Watch momentum redistribute — the light one rebounds, the heavies crawl.
+
+---
+
+## 17. Chapter 16 — Projectiles: Gravity Arcs and Aiming
+
+### Two one-line motions multiplied
+
+A shell has no horizontal force and constant vertical force, so the arc is a parabola made of two trivial updates:
+
+```
+vx = const              x += vx·dt
+vy += g·dt              y += vy·dt
+```
+
+Range on flat ground: `R = v²·sin(2θ)/g` — 45° flies farthest; every other angle trades height for distance. The demo draws the theory range as a yellow tick and previews the arc as green dots by simulating forward 120 steps of `1/30 s` before firing. Aim is kinematics run forward in time — the cheapest prediction in games.
+
+### Dummy value walkthrough
+
+```
+power = 520, θ = -40°, g = 900. vx = 520·cos40° ≈ 398, vy ≈ -334.
+Apex height: vy²/2g ≈ 334²/1800 ≈ 62 px above muzzle.
+Theory range: 520²·sin80°/900 ≈ 270400·0.985/900 ≈ 296 px.
+Bounce (vy > 220) keeps 45% vertical, 80% horizontal — each hop dies fast.
+```
+
+### Exercise 16
+
+Add wind: a constant horizontal accel `w` toggled with `W`, shown as a drifting arrow. Re-derive range mentally — `x` is no longer unforced, so the 45° rule breaks. Find the new best angle by trial.
+
+---
+
+## 18. Chapter 17 — Collisions and Impulse
+
+### A bounce is an exchange
+
+Two balls overlap: split everything along the impact normal `n` (centers axis). Tangential velocity is untouched — balls slide past each other frictionlessly. Normal velocity trades by mass through the impulse:
+
+```
+j = -(1+e)·vn / (1/ma + 1/mb)      apply ±j·n/ma, ±j·n/mb
+```
+
+`e` (restitution) scales the refund: `e = 1` keeps every joule, `e = 0` eats the approach (thud). Equal masses head-on swap velocities exactly — the Newton's-cradle click you can verify in the demo. Then positional correction pushes the balls apart split by inverse mass, so stacks never sink.
+
+### Dummy value walkthrough
+
+```
+a: m=1, v=(260,0). b: m=1, v=(-260,0). Head-on, e=0.9.
+vn = (vb-va)·n = -520. j = -(1.9)(-520)/2 = 494.
+a: v = 260 - 494 = -234.   b: v = -260 + 494 = +234.
+They rebound at 90% speed. The missing 10% is the thud — energy lost to e.
+Heavy (m=4) hit by light (m=1) at same speeds: light rebounds fast, heavy crawls.
+```
+
+### Exercise 17
+
+Turn on gravity (`G`) and spawn ten balls. The all-pairs loop is O(n²) — fine at ten, dying at five hundred. Add a sleep check: if `|v| < 8` for a second, zero it. Sleeping stacks cost nothing visually and everything physically.
+
+---
+
+## 19. Chapter 18 — Pendulums, Torque, and Orbits
+
+### Gravity with leverage
+
+A pendulum is gravity making torque about the pivot: `α = -(g/L)·sin(θ)`. Small swings approximate a clock with period `T ≈ 2π√(L/g)`; big swings linger at the edges because `sin` saturates. Energy trades visibly: green KE bar peaks at the bottom, yellow PE bar peaks at the edges, sum nearly constant (Euler leaks a little — that leak is why real engines use better integrators).
+
+The orbiter is the same law turned sideways: `a = GM·r̂/r²` toward the planet. Fall forever, miss forever — an orbit is a pendulum that never comes back.
+
+### Dummy value walkthrough
+
+```
+L = 260, g = 900, θ = 0.9 rad. α = -(900/260)·sin(0.9) ≈ -2.71 rad/s².
+T ≈ 2π√(260/900) ≈ 3.38 s per swing — slow, weighty.
+Press G: g = 300 → T ≈ 5.85 s. Moon mode; everything floats.
+Orbit: GM tuned so v = 170 at r = 220 nearly circles — raise v and it escapes,
+lower it and it spirals in. That knife-edge IS orbital mechanics.
+```
+
+### Exercise 18
+
+Add a second pendulum link (double pendulum): the second rod hangs from the first bob with its own `θ₂, ω₂`. Chaotic motion falls out of two torque lines — no randomness, pure sensitivity.
+
+---
+
+## 20. Chapter 19 — Kinetic Ragdoll: Verlet Mesh and Shatter
+
+### Velocity hides in two positions
+
+Verlet integration never stores velocity. It keeps current and previous position, and velocity is implicit in their difference:
+
+```
+new = pos + (pos - old)·damping + a·dt²
+```
+
+Ragdoll = points (Verlet, gravity) + sticks (distance constraints, relaxed 3×/frame, split by pinned state). The points fly; the sticks argue them back; that argument is the body. Sticks redden under strain `|d-len|/len` so you see stress before failure.
+
+SPACE detonates a radial kick (near = fast), DRAG grabs any point within 30 px, `B` rebuilds, `G` kills gravity for zero-G jelly. The 8 px shake on detonation is Chapter 12's screen shake returning for one last cameo.
+
+### Dummy value walkthrough
+
+```
+Point at rest, g = 900, dt = 1/60. a·dt² = 900/3600 = 0.25 px/step².
+After 60 steps ≈ 0.25·(60·61/2) ≈ 457 px fallen — the quadratic shows.
+Blast: near point d=30 → kick 26 px shoved into (pos-old) = instant ~1500 px/s.
+Sticks relax 3×: each pass halves the residual stretch — 3 passes ≈ 87% fixed.
+```
+
+### Exercise 19
+
+Cut sticks, don't move points: click a stick to delete it and watch the mesh sag through the hole. Then add stick breaking — delete any stick whose strain exceeds 60% during the blast. Destruction falls out of one `if`.
+
+---
+
 ## Appendix A — Formulae Quick Reference
 
 ### Time and interpolation
@@ -1420,6 +1574,17 @@ The arm is Chapter 9's solve with a damp on the hand; the blink is Chapter 10's 
 | Squash/stretch on velocity | `stretch = clamp(speed·k, 0, max)` |
 | Impact squash | `squash += vy·k`, then `damp(squash, 0, λ, dt)` |
 | Screen shake | `offset = (rand-0.5)·2·shake`, `shake = damp(shake, 0, λ, dt)` |
+
+### Kinetics (Ch 15–19)
+
+| Concept | Formula |
+|---------|---------|
+| Newton's 2nd | `a = F/m`, `v += a·dt` |
+| Momentum / energy | `p = m·v`, `KE = ½·m·|v|²` |
+| Projectile | `x += vx·dt`, `vy += g·dt`, `R = v²·sin(2θ)/g` |
+| Collision impulse | `j = -(1+e)·vn / (1/ma + 1/mb)` along normal |
+| Pendulum torque | `α = -(g/L)·sin(θ)`, `T ≈ 2π√(L/g)` |
+| Verlet | `new = pos + (pos-old)·damping + a·dt²` |
 
 ---
 

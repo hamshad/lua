@@ -2,9 +2,9 @@
 -- FEYNMAN PROCEDURAL ANIMATION — LÖVE2D
 -- ============================================================
 -- A LÖVE2D app that teaches procedural animation and game feel
--- through 14 interactive chapters. Each chapter is a module in
+-- through 19 interactive chapters. Each chapter is a module in
 -- chapters/ exporting init()/update()/draw() and optionally
--- mousepressed()/keypressed().
+-- mousepressed()/mousereleased()/keypressed().
 --
 -- Shared resources:
 --   vec2.lua   — tiny 2D vector library
@@ -16,7 +16,9 @@
 --   =          Chapter 12
 --   ENTER      Chapter 13
 --   ]          Chapter 14
---   SPACE      Reset current chapter
+--   Q/W/E/R/T  Chapters 15-19 (kinetic mechanics)
+--   SPACE      Chapter action (fire/kick/punch — per chapter)
+--   BACKSPACE  Reset current chapter
 --   ESC        Quit
 --   MOUSE / arrow keys — vary per chapter
 -- ============================================================
@@ -24,9 +26,9 @@
 -- The shared math helpers every chapter draws on.
 local utils = require("utils")
 
--- chapters: ordered list of the 14 chapter modules, indexed by
--- chapter number. `chapters[1]` is chapter1.lua, `chapters[14]` is
--- chapter14.lua.
+-- chapters: ordered list of the 19 chapter modules, indexed by
+-- chapter number. `chapters[1]` is chapter1.lua, `chapters[19]` is
+-- chapter19.lua.
 local chapters = {
   require("chapters.chapter1"),
   require("chapters.chapter2"),
@@ -42,6 +44,11 @@ local chapters = {
   require("chapters.chapter12"),
   require("chapters.chapter13"),
   require("chapters.chapter14"),
+  require("chapters.chapter15"),
+  require("chapters.chapter16"),
+  require("chapters.chapter17"),
+  require("chapters.chapter18"),
+  require("chapters.chapter19"),
 }
 
 -- Globals shared with chapters (set inside each init):
@@ -52,7 +59,7 @@ local chapters = {
 --   Example: initChapter(4) → currentChapter = 4.
 local currentChapter = 1
 -- totalChapters: how many chapter modules exist (used by the header).
-local totalChapters = 14
+local totalChapters = 19
 -- accumulator: leftover real time (seconds) not yet spent on a fixed
 -- physics step. It lets us step at exact 1/60 s intervals no matter
 -- what the frame rate is.
@@ -118,6 +125,8 @@ function love.keypressed(key)
 
   -- keyMap: maps each key name to the chapter number it opens.
   --   Example: pressing "3" → initChapter(3).
+  --   NOTE: SPACE is reserved for per-chapter actions (fire/kick);
+  --   BACKSPACE resets, so actions never get wiped by the reset.
   local keyMap = {
     ["1"] = 1,
     ["2"] = 2,
@@ -133,6 +142,11 @@ function love.keypressed(key)
     ["="] = 12,
     ["return"] = 13,
     ["]"] = 14,
+    ["q"] = 15,
+    ["w"] = 16,
+    ["e"] = 17,
+    ["r"] = 18,
+    ["t"] = 19,
   }
   if keyMap[key] then
     initChapter(keyMap[key])
@@ -141,7 +155,7 @@ function love.keypressed(key)
 
   if key == "escape" then
     love.event.quit()
-  elseif key == " " then
+  elseif key == "backspace" then
     -- Reset the current chapter to a clean state.
     initChapter(currentChapter)
   end
@@ -155,6 +169,15 @@ function love.mousepressed(x, y, button)
   local ch = chapters[currentChapter]
   if ch.mousepressed then
     ch.mousepressed(x, y, button)
+  end
+end
+
+-- love.mousereleased(x, y, button): forward releases (drag-to-fling
+-- chapters 17-19 need the release point to compute velocity).
+function love.mousereleased(x, y, button)
+  local ch = chapters[currentChapter]
+  if ch.mousereleased then
+    ch.mousereleased(x, y, button)
   end
 end
 
@@ -176,7 +199,7 @@ end
 -- ============================================================
 
 -- drawHeader(): draw the persistent top bar — the app title and the
--- "Chapter N/14" readout. currentChapter feeds the N.
+-- "Chapter N/19" readout. currentChapter feeds the N.
 function drawHeader()
   love.graphics.setFont(fontSmall)
   love.graphics.setColor(0.3, 0.3, 0.3)
@@ -190,7 +213,7 @@ end
 function drawControls()
   love.graphics.setFont(fontSmall)
   love.graphics.setColor(0.4, 0.4, 0.4)
-  love.graphics.print("[1-9,0] Ch1-10  [-] Ch11  [=] Ch12  [13] Ch13  [14] Ch14  [SPACE] Reset  [ESC] Quit", 10, 752)
+  love.graphics.print("[1-9,0] Ch1-10  [-] Ch11  [=] Ch12  [RET] Ch13  [] ] Ch14  [Q-T] Ch15-19  [BKSP] Reset  [ESC] Quit", 10, 752)
   love.graphics.setColor(1, 1, 1)
 end
 
